@@ -218,7 +218,7 @@ func TestBlockCipherAesCtrEncryptionInvalidHMAC(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lbco.Public.CipherOptions["hmac"] = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}
+	lbco.Public.Hmac = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}
 
 	plaintextReader, _, err := bc2.Decrypt(ciphertextTestReader, lbco)
 	if err != nil {
@@ -229,6 +229,6 @@ func TestBlockCipherAesCtrEncryptionInvalidHMAC(t *testing.T) {
 	// we will hit the error the first time
 	_, err = plaintextReader.Read(plaintext)
 	if err == nil || err == io.EOF {
-		t.Fatal("Read() should have failed due to wrong key")
+		t.Fatal("Read() should have failed due to Invalid HMAC verification")
 	}
 }
