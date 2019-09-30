@@ -250,12 +250,11 @@ func parsePlatformArray(specifiers []string) ([]ocispec.Platform, error) {
 	return speclist, nil
 }
 
-
 // CreateCryptoConfig from the list of recipient strings and list of key paths of private keys
 func CreateCryptoConfig(recipients []string, keys []string) (encconfig.CryptoConfig, error) {
-    var decryptCc *encconfig.CryptoConfig
+	var decryptCc *encconfig.CryptoConfig
 	ccs := []encconfig.CryptoConfig{}
-	if len(recipients) > 0 {
+	if len(keys) > 0 {
 		dcc, err := CreateDecryptCryptoConfig(keys, []string{})
 		if err != nil {
 			return encconfig.CryptoConfig{}, err
