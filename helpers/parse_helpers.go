@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,7 +15,6 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli"
 )
 
 // processRecipientKeys sorts the array of recipients by type. Recipients may be either
@@ -147,11 +147,11 @@ func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]b
 	return gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privkeys, privkeysPasswords, nil
 }
 
-func createGPGClient(context *cli.Context) (ocicrypt.GPGClient, error) {
-	return ocicrypt.NewGPGClient(context.String("gpg-version"), context.String("gpg-homedir"))
+func createGPGClient(context context.Context) (ocicrypt.GPGClient, error) {
+	return ocicrypt.NewGPGClient(context.Value("gpg-version").(string), context.Value("gpg-homedir").(string))
 }
 
-func getGPGPrivateKeys(context *cli.Context, gpgSecretKeyRingFiles [][]byte, descs []ocispec.Descriptor, mustFindKey bool) (gpgPrivKeys [][]byte, gpgPrivKeysPwds [][]byte, err error) {
+func getGPGPrivateKeys(context context.Context, gpgSecretKeyRingFiles [][]byte, descs []ocispec.Descriptor, mustFindKey bool) (gpgPrivKeys [][]byte, gpgPrivKeysPwds [][]byte, err error) {
 	gpgClient, err := createGPGClient(context)
 	if err != nil {
 		return nil, nil, err
