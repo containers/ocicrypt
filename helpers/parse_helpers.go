@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/containerd/containerd/platforms"
 	"github.com/containers/ocicrypt"
 	encconfig "github.com/containers/ocicrypt/config"
 	encutils "github.com/containers/ocicrypt/utils"
@@ -234,20 +233,6 @@ func CreateDecryptCryptoConfig(keys []string, decRecipients []string) (encconfig
 	ccs = append(ccs, privKeysCc)
 
 	return encconfig.CombineCryptoConfigs(ccs), nil
-}
-
-// parsePlatformArray parses an array of specifiers and converts them into an array of specs.Platform
-func parsePlatformArray(specifiers []string) ([]ocispec.Platform, error) {
-	var speclist []ocispec.Platform
-
-	for _, specifier := range specifiers {
-		spec, err := platforms.Parse(specifier)
-		if err != nil {
-			return []ocispec.Platform{}, err
-		}
-		speclist = append(speclist, spec)
-	}
-	return speclist, nil
 }
 
 // CreateCryptoConfig from the list of recipient strings and list of key paths of private keys
