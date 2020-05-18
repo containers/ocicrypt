@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,7 +11,6 @@ import (
 	encconfig "github.com/containers/ocicrypt/config"
 	encutils "github.com/containers/ocicrypt/utils"
 
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
@@ -144,27 +142,6 @@ func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]b
 		}
 	}
 	return gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privkeys, privkeysPasswords, nil
-}
-
-func createGPGClient(context context.Context) (ocicrypt.GPGClient, error) {
-	return ocicrypt.NewGPGClient(context.Value("gpg-version").(string), context.Value("gpg-homedir").(string))
-}
-
-func getGPGPrivateKeys(context context.Context, gpgSecretKeyRingFiles [][]byte, descs []ocispec.Descriptor, mustFindKey bool) (gpgPrivKeys [][]byte, gpgPrivKeysPwds [][]byte, err error) {
-	gpgClient, err := createGPGClient(context)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var gpgVault ocicrypt.GPGVault
-	if len(gpgSecretKeyRingFiles) > 0 {
-		gpgVault = ocicrypt.NewGPGVault()
-		err = gpgVault.AddSecretKeyRingDataArray(gpgSecretKeyRingFiles)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	return ocicrypt.GPGGetPrivateKey(descs, gpgClient, gpgVault, mustFindKey)
 }
 
 // CreateDecryptCryptoConfig creates the CryptoConfig object that contains the necessary
