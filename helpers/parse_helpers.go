@@ -63,6 +63,23 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, er
 	return gpgRecipients, pubkeys, x509s, nil
 }
 
+// processx509Certs processes x509 certificate files
+func processx509Certs(keys []string) ([][]byte, error) {
+	var x509s [][]byte
+	for _, key := range keys {
+		tmp, err := ioutil.ReadFile(key)
+		if err != nil {
+			return nil, errors.Wrap(err, "Unable to read file")
+		}
+		if !encutils.IsCertificate(tmp) {
+			continue
+		}
+		x509s = append(x509s, tmp)
+
+	}
+	return x509s, nil
+}
+
 // processPwdString process a password that may be in any of the following formats:
 // - file=<passwordfile>
 // - pass=<password>
@@ -138,7 +155,9 @@ func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]b
 			gpgSecretKeyRingFiles = append(gpgSecretKeyRingFiles, tmp)
 			gpgSecretKeyPasswords = append(gpgSecretKeyPasswords, password)
 		} else {
-			return nil, nil, nil, nil, fmt.Errorf("unidentified private key in file %s (password=%s)", keyfile, string(password))
+			// ignore if file is not recognized, so as not to error if additional
+			// metadata/cert files exists
+			continue
 		}
 	}
 	return gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privkeys, privkeysPasswords, nil
@@ -155,6 +174,13 @@ func CreateDecryptCryptoConfig(keys []string, decRecipients []string) (encconfig
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
+
+	// x509 certs can also be passed in via keys
+	x509FromKeys, err := processx509Certs(keys)
+	if err != nil {
+		return encconfig.CryptoConfig{}, err
+	}
+	x509s = append(x509s, x509FromKeys...)
 
 	gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privKeys, privKeysPasswords, err := processPrivateKeyFiles(keys)
 	if err != nil {
