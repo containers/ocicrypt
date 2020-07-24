@@ -70,6 +70,24 @@ func EncryptWithGpg(gpgRecipients [][]byte, gpgPubRingFile []byte) (CryptoConfig
 	}, nil
 }
 
+func EncryptWithPkcs11(modules [][]byte) (CryptoConfig, error) {
+	if len(modules) != 2 {
+		return CryptoConfig{}, nil
+	}
+	dc := DecryptConfig{}
+	ep := map[string][][]byte{
+		"modules": {modules[0]},
+		"pin":     {modules[1]},
+	}
+	return CryptoConfig{
+		EncryptConfig: &EncryptConfig{
+			Parameters:    ep,
+			DecryptConfig: dc,
+		},
+		DecryptConfig: &dc,
+	}, nil
+}
+
 // DecryptWithPrivKeys returns a CryptoConfig to decrypt with configured private keys
 func DecryptWithPrivKeys(privKeys [][]byte, privKeysPasswords [][]byte) (CryptoConfig, error) {
 	if len(privKeys) != len(privKeysPasswords) {
@@ -124,6 +142,24 @@ func DecryptWithGpgPrivKeys(gpgPrivKeys, gpgPrivKeysPwds [][]byte) (CryptoConfig
 
 	ep := map[string][][]byte{}
 
+	return CryptoConfig{
+		EncryptConfig: &EncryptConfig{
+			Parameters:    ep,
+			DecryptConfig: dc,
+		},
+		DecryptConfig: &dc,
+	}, nil
+}
+
+// DecryptWithPkcs11 returns a CryptoConfig to decrypt with configured pkcs11 modules
+func DecryptWithPkcs11(modules [][]byte) (CryptoConfig, error) {
+	dc := DecryptConfig{
+		Parameters: map[string][][]byte{
+			"modules": {modules[0]},
+			"pin":     {modules[1]},
+		},
+	}
+	ep := map[string][][]byte{}
 	return CryptoConfig{
 		EncryptConfig: &EncryptConfig{
 			Parameters:    ep,

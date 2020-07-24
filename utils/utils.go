@@ -22,7 +22,10 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	p11 "github.com/miekg/pkcs11"
+	"golang.org/x/crypto/ssh/terminal"
 	"strings"
+	"syscall"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/openpgp"
@@ -217,4 +220,28 @@ func SortDecryptionKeys(b64ItemList string) (map[string][][]byte, error) {
 	}
 
 	return dcparameters, nil
+}
+
+// IsPkcs11SharedLibrary return true in case the given byte array represents a real pkcs11 dot so file path
+func IsPkcs11SharedLibrary(module string) bool {
+	p := p11.New(module)
+	err := p.Initialize()
+	defer p.Destroy()
+	defer p.Finalize()
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+// InputPassword read the password
+func InputPassword(name string) (string, error) {
+	fmt.Printf("Enter %s Password: ", name)
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", err
+	}
+	fmt.Println()
+	password := string(bytePassword)
+	return strings.TrimSpace(password), nil
 }

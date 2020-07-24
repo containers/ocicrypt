@@ -19,6 +19,7 @@ package ocicrypt
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/containers/ocicrypt/keywrap/pkcs11"
 	"io"
 	"strings"
 
@@ -43,6 +44,7 @@ func init() {
 	RegisterKeyWrapper("pgp", pgp.NewKeyWrapper())
 	RegisterKeyWrapper("jwe", jwe.NewKeyWrapper())
 	RegisterKeyWrapper("pkcs7", pkcs7.NewKeyWrapper())
+	RegisterKeyWrapper("pkcs11", pkcs11.NewKeyWrapper())
 }
 
 var keyWrappers map[string]keywrap.KeyWrapper
