@@ -149,7 +149,7 @@ func generateRSAKeyPair(p *pkcs11.Ctx, session pkcs11.SessionHandle, tokenLabel 
 	return pbk, pvk
 }
 
-// loginDevice login Device and use the slot[0]
+// loginDevice login Device
 func loginDevice(modules [][]byte, pins [][]byte) (ctx *pkcs11.Ctx, session pkcs11.SessionHandle, err error) {
 	if len(pins) == 0 {
 		return nil, 0, errors.New("Need input module pin")
@@ -162,11 +162,11 @@ func loginDevice(modules [][]byte, pins [][]byte) (ctx *pkcs11.Ctx, session pkcs
 	}
 	module := string(modules[0])
 	module = strings.TrimSpace(module)
-	if module == "" {
+	ctx = pkcs11.New(module)
+	if ctx == nil {
 		return nil, 0, errors.New("Please check Module path, input is: " + module)
 	}
 
-	ctx = pkcs11.New(module)
 	err = ctx.Initialize()
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "Device Initialize failed")

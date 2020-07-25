@@ -222,9 +222,12 @@ func SortDecryptionKeys(b64ItemList string) (map[string][][]byte, error) {
 	return dcparameters, nil
 }
 
-// IsPkcs11SharedLibrary return true in case the given byte array represents a real pkcs11 dot so file path
+// IsPkcs11SharedLibrary return true in case the given sting represent a real pkcs11 module file path
 func IsPkcs11SharedLibrary(module string) bool {
-	p := p11.New(module)
+	p := p11.New(strings.TrimSpace(module))
+	if p == nil {
+		return false
+	}
 	err := p.Initialize()
 	defer p.Destroy()
 	defer p.Finalize()
