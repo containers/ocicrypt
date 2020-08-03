@@ -1,4 +1,4 @@
-dist: xenial
+dist: bionic
 language: go
 
 os:
@@ -10,6 +10,12 @@ go:
 matrix:
   include:
     - os: linux
+
+addons:
+  apt:
+    packages:
+    - gnutls-bin
+    - softhsm2
 
 go_import_path: github.com/containers/ocicrypt
 
