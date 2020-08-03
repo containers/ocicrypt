@@ -17,7 +17,6 @@
 package pkcs11
 
 import (
-	"fmt"
 	"github.com/containers/ocicrypt/config"
 	"github.com/containers/ocicrypt/keywrap"
 	"github.com/miekg/pkcs11"
@@ -43,35 +42,46 @@ func NewKeyWrapper() keywrap.KeyWrapper {
 }
 
 func (kw pkcs11KeyWrapper) GetAnnotationID() string {
-	return "org.opencontainers.image.enc.keys.pkcs11"
+	return "org.opencontainers.image.enc.keys.experimental.pkcs11"
 }
 
 func (kw pkcs11KeyWrapper) WrapKeys(ec *config.EncryptConfig, optsData []byte) ([]byte, error) {
-	// no recipients
-	if len(ec.Parameters["modules"]) == 0 || len(ec.Parameters["pin"]) == 0 {
+	if len(ec.Parameters["modules"]) == 0 || len(ec.Parameters["pins"]) == 0 {
 		return nil, nil
 	}
-	p11ctx, session, err := loginDevice(ec.Parameters["modules"], ec.Parameters["pin"])
+	p11ctx, session, err := loginDevice(ec.Parameters["modules"], ec.Parameters["pins"])
+	defer closeModule(p11ctx, session)
+	// no recipients
 	if err != nil {
 		return nil, err
 	}
 
-	pub, _ := getRSA(KeyLabel, p11ctx, session)
+	pub, err := getPublickey(KeyLabel, p11ctx, session)
+	if err != nil {
+		return nil, err
+	}
 
 	err = p11ctx.EncryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, OAEPParams)}, pub)
+	if err != nil {
+		return nil, errors.Wrap(err, "Module EncryptInit error")
+	}
+
 	encrypt, err := p11ctx.Encrypt(session, optsData)
 	if err != nil {
 		return nil, errors.Wrap(err, "Encrypt with Module failed")
 	}
 
-	closeModule(p11ctx, session)
 	return encrypt, nil
 }
 
 func (kw pkcs11KeyWrapper) UnwrapKey(dc *config.DecryptConfig, encrypted []byte) (plain []byte, err error) {
-	p11ctx, session, err := loginDevice(dc.Parameters["modules"], dc.Parameters["pin"])
+	p11ctx, session, err := loginDevice(dc.Parameters["modules"], dc.Parameters["pins"])
+	defer closeModule(p11ctx, session)
 
 	priv, err := findObject(p11ctx, session, pkcs11.CKO_PRIVATE_KEY, KeyLabel)
+	if err != nil {
+		return nil, err
+	}
 
 	err = p11ctx.DecryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, OAEPParams)}, priv)
 	if err != nil {
@@ -83,7 +93,6 @@ func (kw pkcs11KeyWrapper) UnwrapKey(dc *config.DecryptConfig, encrypted []byte)
 		return nil, errors.Wrap(err, "Decrypt failed")
 	}
 
-	closeModule(p11ctx, session)
 	return
 }
 
@@ -108,11 +117,12 @@ func (kw pkcs11KeyWrapper) GetRecipients(packet string) ([]string, error) {
 	return []string{"[pkcs11]"}, nil
 }
 
-// getRSA generate a rsa key if it doesn't exist
-func getRSA(label string, p *pkcs11.Ctx, sh pkcs11.SessionHandle) (pub, priv pkcs11.ObjectHandle) {
-	pub, err := findObject(p, sh, pkcs11.CKO_PUBLIC_KEY, label)
+// getPublickey get module public key, generate a rsa key if it doesn't exist
+// TODO: experimental, use RSA Key for wrap/unwrap
+func getPublickey(label string, p *pkcs11.Ctx, sh pkcs11.SessionHandle) (pub pkcs11.ObjectHandle, err error) {
+	pub, err = findObject(p, sh, pkcs11.CKO_PUBLIC_KEY, label)
 	if err != nil {
-		pub, priv = generateRSAKeyPair(p, sh, label, true)
+		pub, _, err = generateRSAKeyPair(p, sh, label, true)
 	}
 	return
 }
@@ -138,7 +148,7 @@ func findObject(p *pkcs11.Ctx, sh pkcs11.SessionHandle, class uint, label string
 	return 0, errors.New("Not Found Object")
 }
 
-func generateRSAKeyPair(p *pkcs11.Ctx, session pkcs11.SessionHandle, tokenLabel string, tokenPersistent bool) (pkcs11.ObjectHandle, pkcs11.ObjectHandle) {
+func generateRSAKeyPair(p *pkcs11.Ctx, session pkcs11.SessionHandle, tokenLabel string, tokenPersistent bool) (pkcs11.ObjectHandle, pkcs11.ObjectHandle, error) {
 	publicKeyTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
@@ -155,14 +165,14 @@ func generateRSAKeyPair(p *pkcs11.Ctx, session pkcs11.SessionHandle, tokenLabel 
 		pkcs11.NewAttribute(pkcs11.CKA_SENSITIVE, true),
 		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, true),
 	}
-	pbk, pvk, e := p.GenerateKeyPair(session,
+	pbk, pvk, err := p.GenerateKeyPair(session,
 		[]*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_KEY_PAIR_GEN, nil)},
 		publicKeyTemplate, privateKeyTemplate)
-	if e != nil {
-		fmt.Printf("failed to generate keypair: %s\n", e.Error())
+	if err != nil {
+		return 0, 0, errors.Wrap(err, "Failed to generate keypair")
 	}
 
-	return pbk, pvk
+	return pbk, pvk, nil
 }
 
 // loginDevice login Device
@@ -174,7 +184,7 @@ func loginDevice(modules [][]byte, pins [][]byte) (ctx *pkcs11.Ctx, session pkcs
 	pin = strings.TrimSpace(pin)
 
 	if len(modules) > 1 {
-		return nil, 0, errors.New("Just support *one* module")
+		return nil, 0, errors.New("Just support single module")
 	}
 	module := string(modules[0])
 	module = strings.TrimSpace(module)
@@ -185,7 +195,10 @@ func loginDevice(modules [][]byte, pins [][]byte) (ctx *pkcs11.Ctx, session pkcs
 
 	err = ctx.Initialize()
 	if err != nil {
-		return nil, 0, errors.Wrap(err, "Device Initialize failed")
+		p11Err := err.(pkcs11.Error)
+		if p11Err != pkcs11.CKR_CRYPTOKI_ALREADY_INITIALIZED {
+			return nil, 0, errors.Wrap(err, "Device Initialize failed")
+		}
 	}
 	slots, err := ctx.GetSlotList(true)
 	if err != nil {
@@ -213,8 +226,8 @@ func loginDevice(modules [][]byte, pins [][]byte) (ctx *pkcs11.Ctx, session pkcs
 }
 
 func closeModule(ctx *pkcs11.Ctx, session pkcs11.SessionHandle) {
-	defer ctx.Logout(session)
-	defer ctx.CloseSession(session)
-	defer ctx.Destroy()
-	defer ctx.Finalize()
+	ctx.Logout(session)
+	ctx.CloseSession(session)
+	ctx.Destroy()
+	ctx.Finalize()
 }

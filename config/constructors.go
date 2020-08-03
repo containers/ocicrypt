@@ -70,15 +70,23 @@ func EncryptWithGpg(gpgRecipients [][]byte, gpgPubRingFile []byte) (CryptoConfig
 	}, nil
 }
 
-func EncryptWithPkcs11(modules [][]byte) (CryptoConfig, error) {
-	if len(modules) != 2 {
-		return CryptoConfig{}, nil
+// EncryptWithPkcs11 returns a CryptoConfig to encrypt with configured PKCS11 parameters
+func EncryptWithPkcs11(modules [][]byte, pins [][]byte) (CryptoConfig, error) {
+	if len(modules) != len(pins) {
+		return CryptoConfig{}, errors.New("Length of modules should match length of pins")
 	}
+
+	// TODO: experimental, just support single module
+	if len(modules) != 1 {
+		return CryptoConfig{}, errors.New("experimental, just support single module")
+	}
+
 	dc := DecryptConfig{}
 	ep := map[string][][]byte{
-		"modules": {modules[0]},
-		"pin":     {modules[1]},
+		"modules": modules,
+		"pins":    pins,
 	}
+
 	return CryptoConfig{
 		EncryptConfig: &EncryptConfig{
 			Parameters:    ep,
@@ -152,11 +160,11 @@ func DecryptWithGpgPrivKeys(gpgPrivKeys, gpgPrivKeysPwds [][]byte) (CryptoConfig
 }
 
 // DecryptWithPkcs11 returns a CryptoConfig to decrypt with configured pkcs11 modules
-func DecryptWithPkcs11(modules [][]byte) (CryptoConfig, error) {
+func DecryptWithPkcs11(modules [][]byte, pins [][]byte) (CryptoConfig, error) {
 	dc := DecryptConfig{
 		Parameters: map[string][][]byte{
-			"modules": {modules[0]},
-			"pin":     {modules[1]},
+			"modules": modules,
+			"pins":    pins,
 		},
 	}
 	ep := map[string][][]byte{}

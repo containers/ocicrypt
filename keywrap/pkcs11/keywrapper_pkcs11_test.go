@@ -106,13 +106,13 @@ func createValidPkcs11Cc() (*config.CryptoConfig, error) {
 		EncryptConfig: &config.EncryptConfig{
 			Parameters: map[string][][]byte{
 				"modules": {[]byte(modulePath)},
-				"pin":     {[]byte(modulePin)},
+				"pins":    {[]byte(modulePin)},
 			},
 		},
 		DecryptConfig: &config.DecryptConfig{
 			Parameters: map[string][][]byte{
 				"modules": {[]byte(modulePath)},
-				"pin":     {[]byte(modulePin)},
+				"pins":    {[]byte(modulePin)},
 			},
 		},
 	}
@@ -125,7 +125,7 @@ func createInvalidPkcs11Cc() (*config.CryptoConfig, error) {
 			Parameters: map[string][][]byte{
 				// make error module path
 				"modules": {[]byte(modulePath + ".err")},
-				"pin":     {[]byte(modulePin)},
+				"pins":    {[]byte(modulePin)},
 			},
 		},
 	}
