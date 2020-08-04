@@ -46,7 +46,7 @@ func TestKeyWrapPkcs11Invalid(t *testing.T) {
 		t.Skip("Need set env variable [ENC_PKCS11_PIN] for module pin.")
 	}
 
-	cc, err := createInvalidPkcs11Cc()
+	cc := createInvalidPkcs11Cc()
 
 	kw := NewKeyWrapper()
 
@@ -80,7 +80,7 @@ func TestKeyWrapPkcs11Success(t *testing.T) {
 		t.Skip("Need set env variable [ENC_PKCS11_PIN] for module pin.")
 	}
 
-	cc, err := createValidPkcs11Cc()
+	cc := createValidPkcs11Cc()
 
 	kw := NewKeyWrapper()
 
@@ -101,7 +101,7 @@ func TestKeyWrapPkcs11Success(t *testing.T) {
 	}
 }
 
-func createValidPkcs11Cc() (*config.CryptoConfig, error) {
+func createValidPkcs11Cc() *config.CryptoConfig {
 	validPkcs11Ccs := &config.CryptoConfig{
 		EncryptConfig: &config.EncryptConfig{
 			Parameters: map[string][][]byte{
@@ -116,10 +116,10 @@ func createValidPkcs11Cc() (*config.CryptoConfig, error) {
 			},
 		},
 	}
-	return validPkcs11Ccs, nil
+	return validPkcs11Ccs
 }
 
-func createInvalidPkcs11Cc() (*config.CryptoConfig, error) {
+func createInvalidPkcs11Cc() *config.CryptoConfig {
 	wrongPathPkcs11Ccs := &config.CryptoConfig{
 		EncryptConfig: &config.EncryptConfig{
 			Parameters: map[string][][]byte{
@@ -129,5 +129,5 @@ func createInvalidPkcs11Cc() (*config.CryptoConfig, error) {
 			},
 		},
 	}
-	return wrongPathPkcs11Ccs, nil
+	return wrongPathPkcs11Ccs
 }

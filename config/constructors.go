@@ -71,6 +71,27 @@ func EncryptWithGpg(gpgRecipients [][]byte, gpgPubRingFile []byte) (CryptoConfig
 }
 
 // EncryptWithPkcs11 returns a CryptoConfig to encrypt with configured PKCS11 parameters
+//
+// WARNING: will encrypt with modules
+//
+// Encrypt Config, As an example:
+//
+//  modulePath := "/usr/local/lib/softhsm/libsofthsm2.so"
+//	modulePin := "1234"
+//  modules := [][]byte{}
+//  pins := [][]byte{}
+//  modules = append(modules, []byte(modulePath))
+//  pins = append(pins, []byte(modulePin))
+//
+//  validPkcs11Ccs := &config.CryptoConfig{
+//		EncryptConfig: &config.EncryptConfig{
+//			Parameters: map[string][][]byte{
+//				"modules": modules,
+//				"pins":    pins,
+//			},
+//		},
+//		DecryptConfig: &DecryptConfig{},
+//	}
 func EncryptWithPkcs11(modules [][]byte, pins [][]byte) (CryptoConfig, error) {
 	if len(modules) != len(pins) {
 		return CryptoConfig{}, errors.New("Length of modules should match length of pins")

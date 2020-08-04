@@ -46,17 +46,17 @@ func (kw pkcs11KeyWrapper) GetAnnotationID() string {
 }
 
 func (kw pkcs11KeyWrapper) WrapKeys(ec *config.EncryptConfig, optsData []byte) ([]byte, error) {
-	if len(ec.Parameters["modules"]) == 0 || len(ec.Parameters["pins"]) == 0 {
+	if kw.NoPossibleKeys(ec.Parameters) {
 		return nil, nil
 	}
+
 	p11ctx, session, err := loginDevice(ec.Parameters["modules"], ec.Parameters["pins"])
 	defer closeModule(p11ctx, session)
-	// no recipients
 	if err != nil {
 		return nil, err
 	}
 
-	pub, err := getPublickey(KeyLabel, p11ctx, session)
+	pub, err := getPublicKeyOrCreate(KeyLabel, p11ctx, session)
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +75,15 @@ func (kw pkcs11KeyWrapper) WrapKeys(ec *config.EncryptConfig, optsData []byte) (
 }
 
 func (kw pkcs11KeyWrapper) UnwrapKey(dc *config.DecryptConfig, encrypted []byte) (plain []byte, err error) {
+	if kw.NoPossibleKeys(dc.Parameters) {
+		return nil, nil
+	}
+
 	p11ctx, session, err := loginDevice(dc.Parameters["modules"], dc.Parameters["pins"])
 	defer closeModule(p11ctx, session)
+	if err != nil {
+		return nil, err
+	}
 
 	priv, err := findObject(p11ctx, session, pkcs11.CKO_PRIVATE_KEY, KeyLabel)
 	if err != nil {
@@ -96,13 +103,14 @@ func (kw pkcs11KeyWrapper) UnwrapKey(dc *config.DecryptConfig, encrypted []byte)
 	return
 }
 
+// NoPossibleKeys need have "modules" value and "pins" value
 func (kw pkcs11KeyWrapper) NoPossibleKeys(dcparameters map[string][][]byte) bool {
-	return len(kw.GetPrivateKeys(dcparameters)) == 0
+	return len(kw.GetPrivateKeys(dcparameters)) == 0 && len(dcparameters["modules"]) == 0
 }
 
-// GetPrivateKeys return private key handle
+// GetPrivateKeys return "pins" value in map
 func (kw pkcs11KeyWrapper) GetPrivateKeys(dcparameters map[string][][]byte) [][]byte {
-	return dcparameters["modules"]
+	return dcparameters["pins"]
 }
 
 // GetKeyIdsFromWrappedKeys converts the base64 encoded Packet to uint64 keyIds;
@@ -117,9 +125,10 @@ func (kw pkcs11KeyWrapper) GetRecipients(packet string) ([]string, error) {
 	return []string{"[pkcs11]"}, nil
 }
 
-// getPublickey get module public key, generate a rsa key if it doesn't exist
+// getPublicKeyOrCreate get module public key, generate a rsa key if it doesn't exist
 // TODO: experimental, use RSA Key for wrap/unwrap
-func getPublickey(label string, p *pkcs11.Ctx, sh pkcs11.SessionHandle) (pub pkcs11.ObjectHandle, err error) {
+//       use SoftHSM2 for testing, RSA OAEP just support SHA1
+func getPublicKeyOrCreate(label string, p *pkcs11.Ctx, sh pkcs11.SessionHandle) (pub pkcs11.ObjectHandle, err error) {
 	pub, err = findObject(p, sh, pkcs11.CKO_PUBLIC_KEY, label)
 	if err != nil {
 		pub, _, err = generateRSAKeyPair(p, sh, label, true)
@@ -200,9 +209,11 @@ func loginDevice(modules [][]byte, pins [][]byte) (ctx *pkcs11.Ctx, session pkcs
 			return nil, 0, errors.Wrap(err, "Device Initialize failed")
 		}
 	}
+
+	// TODO: Future enhancement for specifying slot number
 	slots, err := ctx.GetSlotList(true)
 	if err != nil {
-		return nil, 0, errors.Wrap(err, "Get Slots failed")
+		return ctx, 0, errors.Wrap(err, "Get Slots failed")
 	}
 
 	var logged = false
@@ -210,7 +221,7 @@ func loginDevice(modules [][]byte, pins [][]byte) (ctx *pkcs11.Ctx, session pkcs
 		for _, slot := range slots {
 			session, err = ctx.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 			if err != nil {
-				return nil, 0, errors.Wrap(err, "Open Session failed")
+				return ctx, session, errors.Wrap(err, "Open Session failed")
 			}
 			err = ctx.Login(session, pkcs11.CKU_USER, pin)
 			if err == nil {
@@ -220,7 +231,7 @@ func loginDevice(modules [][]byte, pins [][]byte) (ctx *pkcs11.Ctx, session pkcs
 		}
 	}
 	if !logged {
-		return ctx, 0, errors.Wrap(err, "Login failed")
+		return ctx, session, errors.Wrap(err, "Login failed")
 	}
 	return ctx, session, nil
 }
