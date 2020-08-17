@@ -17,14 +17,13 @@
 package pkcs11
 
 import (
-	"bytes"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/containers/ocicrypt/utils/softhsm"
 
 	pkcs11uri "github.com/stefanberger/go-pkcs11uri"
 )
@@ -87,51 +86,17 @@ func TestParsePkcs11KeyFileBad(t *testing.T) {
 	}
 }
 
-func runSoftHSMSetup(t *testing.T) string {
-	cmd := exec.Command(SOFTHSM_SETUP, "setup")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		fmt.Println(out.String())
-		t.Fatal(err)
-	}
-
-	o := out.String()
-	idx := strings.Index(o, "pkcs11:")
-	if idx < 0 {
-		t.Fatalf("Could not find pkcs11 URI in output")
-	}
-
-	return strings.TrimRight(o[idx:], "\n ")
-}
-
-func runSoftHSMGetPubkey(t *testing.T) string {
-	cmd := exec.Command(SOFTHSM_SETUP, "getpubkey")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		fmt.Println(out.String())
-		t.Fatal(err)
-	}
-
-	return out.String()
-}
-
-func runSoftHSMTeardown(t *testing.T) {
-	cmd := exec.Command(SOFTHSM_SETUP, "teardown")
-	_ = cmd.Run()
-}
-
 func TestPkcs11EncryptDecrypt(t *testing.T) {
 	// We always need the query attributes  'pin-value' and 'module-name'
 	// for SoftHSM2 the only other important attribute is 'object' (= the 'label')
-	p11pubkeyuristr := runSoftHSMSetup(t)
-	defer runSoftHSMTeardown(t)
+	p11pubkeyuristr, err := softhsm.RunSoftHSMSetup(SOFTHSM_SETUP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer softhsm.RunSoftHSMTeardown(SOFTHSM_SETUP)
 
 	p11pubkeyuri := pkcs11uri.New()
-	err := p11pubkeyuri.Parse(p11pubkeyuristr)
+	err = p11pubkeyuri.Parse(p11pubkeyuristr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,10 +129,16 @@ func TestPkcs11EncryptDecrypt(t *testing.T) {
 func TestPkcs11EncryptDecryptPubkey(t *testing.T) {
 	// We always need the query attributes  'pin-value' and 'module-name'
 	// for SoftHSM2 the only other important attribute is 'object' (= the 'label')
-	p11pubkeyuristr := runSoftHSMSetup(t)
-	defer runSoftHSMTeardown(t)
+	p11pubkeyuristr, err := softhsm.RunSoftHSMSetup(SOFTHSM_SETUP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer softhsm.RunSoftHSMTeardown(SOFTHSM_SETUP)
 
-	pubkeypem := runSoftHSMGetPubkey(t)
+	pubkeypem, err := softhsm.RunSoftHSMGetPubkey(SOFTHSM_SETUP)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	block, _ := pem.Decode([]byte(pubkeypem))
 	if block == nil {
