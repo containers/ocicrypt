@@ -57,9 +57,9 @@ func TestParsePkcs11KeyFileGood(t *testing.T) {
 	}
 
 	p11conf := getPkcs11Config(t)
-	p11keyfileobj.uri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11keyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
 
-	module, err := p11keyfileobj.uri.GetModule()
+	module, err := p11keyfileobj.Uri.GetModule()
 	if err != nil {
 		t.Fatal(err)
 	}

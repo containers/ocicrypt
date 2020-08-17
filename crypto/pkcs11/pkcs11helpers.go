@@ -68,7 +68,7 @@ type Pkcs11KeyFile struct {
 
 // Pkcs11KeyFileObject is a representation of the Pkcs11KeyFile with the pkcs11 URI as an object
 type Pkcs11KeyFileObject struct {
-	uri pkcs11uri.Pkcs11URI
+	Uri *pkcs11uri.Pkcs11URI
 }
 
 // ParsePkcs11KeyFile parses a pkcs11 key file holding a pkcs11 URI describing a private key.
@@ -93,7 +93,7 @@ func ParsePkcs11KeyFile(yamlstr []byte) (*Pkcs11KeyFileObject, error) {
 		return nil, errors.Wrapf(err, "Could not parse Pkcs11URI from file")
 	}
 
-	return &Pkcs11KeyFileObject{uri: p11uri}, err
+	return &Pkcs11KeyFileObject{Uri: &p11uri}, err
 }
 
 // Pkcs11Config describes the layout of a pkcs11 config file
