@@ -27,6 +27,7 @@ import (
 	"github.com/containers/ocicrypt/keywrap"
 	"github.com/containers/ocicrypt/keywrap/jwe"
 	"github.com/containers/ocicrypt/keywrap/pgp"
+	"github.com/containers/ocicrypt/keywrap/pkcs11"
 	"github.com/containers/ocicrypt/keywrap/pkcs7"
 	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -43,6 +44,7 @@ func init() {
 	RegisterKeyWrapper("pgp", pgp.NewKeyWrapper())
 	RegisterKeyWrapper("jwe", jwe.NewKeyWrapper())
 	RegisterKeyWrapper("pkcs7", pkcs7.NewKeyWrapper())
+	RegisterKeyWrapper("pkcs11", pkcs11.NewKeyWrapper())
 }
 
 var keyWrappers map[string]keywrap.KeyWrapper
