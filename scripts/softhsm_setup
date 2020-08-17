@@ -148,12 +148,12 @@ _EOF_
 		fi
 
 		# more recent versions of p11tool have --generate-privkey ...
-		msg=$(GNUTLS_PIN=1234 p11tool \
+		msg=$(GNUTLS_PIN=$PIN p11tool \
 			--generate-privkey=rsa --label mykey --login \
 			"${tokenuri}" 2>&1)
 		if [ $? -ne 0 ]; then
 			# ... older versions have --generate-rsa
-			msg=$(GNUTLS_PIN=1234 p11tool \
+			msg=$(GNUTLS_PIN=$PIN p11tool \
 				--generate-rsa --label mykey --login \
 				"${tokenuri}" 2>&1)
 			if [ $? -ne 0 ]; then
