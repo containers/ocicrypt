@@ -9,24 +9,32 @@ import (
 
 	"github.com/containers/ocicrypt"
 	encconfig "github.com/containers/ocicrypt/config"
+	"github.com/containers/ocicrypt/crypto/pkcs11"
 	encutils "github.com/containers/ocicrypt/utils"
 
 	"github.com/pkg/errors"
 )
 
+// CryptoConfigOpts holds options needed for de- and encryption
+type CryptoConfigOpts struct {
+	Pkcs11Config *pkcs11.Pkcs11Config
+}
+
 // processRecipientKeys sorts the array of recipients by type. Recipients may be either
 // x509 certificates, public keys, or PGP public keys identified by email address or name
-func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, error) {
+func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, [][]byte, [][]byte, error) {
 	var (
 		gpgRecipients [][]byte
 		pubkeys       [][]byte
 		x509s         [][]byte
+		pkcs11Pubkeys [][]byte
+		pkcs11Yamls   [][]byte
 	)
 	for _, recipient := range recipients {
 
 		idx := strings.Index(recipient, ":")
 		if idx < 0 {
-			return nil, nil, nil, errors.New("Invalid recipient format")
+			return nil, nil, nil, nil, nil, errors.New("Invalid recipient format")
 		}
 
 		protocol := recipient[:idx]
@@ -39,28 +47,41 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, er
 		case "jwe":
 			tmp, err := ioutil.ReadFile(value)
 			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "Unable to read file")
+				return nil, nil, nil, nil, nil, errors.Wrap(err, "Unable to read file")
 			}
 			if !encutils.IsPublicKey(tmp) {
-				return nil, nil, nil, errors.New("File provided is not a public key")
+				return nil, nil, nil, nil, nil, errors.New("File provided is not a public key")
 			}
 			pubkeys = append(pubkeys, tmp)
 
 		case "pkcs7":
 			tmp, err := ioutil.ReadFile(value)
 			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "Unable to read file")
+				return nil, nil, nil, nil, nil, errors.Wrap(err, "Unable to read file")
 			}
 			if !encutils.IsCertificate(tmp) {
-				return nil, nil, nil, errors.New("File provided is not an x509 cert")
+				return nil, nil, nil, nil, nil, errors.New("File provided is not an x509 cert")
 			}
 			x509s = append(x509s, tmp)
 
+		case "pkcs11":
+			tmp, err := ioutil.ReadFile(value)
+			if err != nil {
+				return nil, nil, nil, nil, nil, errors.Wrap(err, "Unable to read file")
+			}
+			if encutils.IsPkcs11PublicKey(tmp) {
+				pkcs11Yamls = append(pkcs11Yamls, tmp)
+			} else if encutils.IsPublicKey(tmp) {
+				pkcs11Pubkeys = append(pkcs11Pubkeys, tmp)
+			} else {
+				return nil, nil, nil, nil, nil, errors.New("Provided file is not a public key")
+			}
+
 		default:
-			return nil, nil, nil, errors.New("Provided protocol not recognized")
+			return nil, nil, nil, nil, nil, errors.New("Provided protocol not recognized")
 		}
 	}
-	return gpgRecipients, pubkeys, x509s, nil
+	return gpgRecipients, pubkeys, x509s, pkcs11Pubkeys, pkcs11Yamls, nil
 }
 
 // processx509Certs processes x509 certificate files
@@ -119,12 +140,13 @@ func processPwdString(pwdString string) ([]byte, error) {
 // - <filename>:pass=<password>
 // - <filename>:fd=<filedescriptor>
 // - <filename>:<password>
-func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]byte, [][]byte, error) {
+func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]byte, [][]byte, [][]byte, error) {
 	var (
 		gpgSecretKeyRingFiles [][]byte
 		gpgSecretKeyPasswords [][]byte
 		privkeys              [][]byte
 		privkeysPasswords     [][]byte
+		pkcs11Yamls           [][]byte
 		err                   error
 	)
 	// keys needed for decryption in case of adding a recipient
@@ -135,20 +157,23 @@ func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]b
 		if len(parts) == 2 {
 			password, err = processPwdString(parts[1])
 			if err != nil {
-				return nil, nil, nil, nil, err
+				return nil, nil, nil, nil, nil, err
 			}
 		}
 
 		keyfile := parts[0]
 		tmp, err := ioutil.ReadFile(keyfile)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, err
 		}
 		isPrivKey, err := encutils.IsPrivateKey(tmp, password)
 		if encutils.IsPasswordError(err) {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, nil, nil, err
 		}
-		if isPrivKey {
+
+		if encutils.IsPkcs11PrivateKey(tmp) {
+			pkcs11Yamls = append(pkcs11Yamls, tmp)
+		} else if isPrivKey {
 			privkeys = append(privkeys, tmp)
 			privkeysPasswords = append(privkeysPasswords, password)
 		} else if encutils.IsGPGPrivateKeyRing(tmp) {
@@ -160,17 +185,23 @@ func processPrivateKeyFiles(keyFilesAndPwds []string) ([][]byte, [][]byte, [][]b
 			continue
 		}
 	}
-	return gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privkeys, privkeysPasswords, nil
+	return gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privkeys, privkeysPasswords, pkcs11Yamls, nil
 }
 
 // CreateDecryptCryptoConfig creates the CryptoConfig object that contains the necessary
-// information to perform decryption from command line options and possibly
-// LayerInfos describing the image and helping us to query for the PGP decryption keys
+// information to perform decryption from command line options.
 func CreateDecryptCryptoConfig(keys []string, decRecipients []string) (encconfig.CryptoConfig, error) {
+	return CreateDecryptCryptoConfigWithOpts(keys, decRecipients, CryptoConfigOpts{})
+}
+
+// CreateDecryptCryptoConfigWithOpts creates the CryptoConfig object that contains the necessary
+// information to perform decryption from command line options. The opts parameter holds options
+// necessary for decryption, such as when using pkcs11 for example.
+func CreateDecryptCryptoConfigWithOpts(keys []string, decRecipients []string, opts CryptoConfigOpts) (encconfig.CryptoConfig, error) {
 	ccs := []encconfig.CryptoConfig{}
 
 	// x509 cert is needed for PKCS7 decryption
-	_, _, x509s, err := processRecipientKeys(decRecipients)
+	_, _, x509s, _, _, err := processRecipientKeys(decRecipients)
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
@@ -182,7 +213,7 @@ func CreateDecryptCryptoConfig(keys []string, decRecipients []string) (encconfig
 	}
 	x509s = append(x509s, x509FromKeys...)
 
-	gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privKeys, privKeysPasswords, err := processPrivateKeyFiles(keys)
+	gpgSecretKeyRingFiles, gpgSecretKeyPasswords, privKeys, privKeysPasswords, pkcs11Yamls, err := processPrivateKeyFiles(keys)
 	if err != nil {
 		return encconfig.CryptoConfig{}, err
 	}
@@ -235,15 +266,27 @@ func CreateDecryptCryptoConfig(keys []string, decRecipients []string) (encconfig
 	}
 	ccs = append(ccs, privKeysCc)
 
+	pkcs11PrivKeysCc, err := encconfig.DecryptWithPkcs11Yaml(opts.Pkcs11Config, pkcs11Yamls)
+	if err != nil {
+		return encconfig.CryptoConfig{}, err
+	}
+	ccs = append(ccs, pkcs11PrivKeysCc)
+
 	return encconfig.CombineCryptoConfigs(ccs), nil
 }
 
 // CreateCryptoConfig from the list of recipient strings and list of key paths of private keys
 func CreateCryptoConfig(recipients []string, keys []string) (encconfig.CryptoConfig, error) {
+	return CreateCryptoConfigWithOpts(recipients, keys, CryptoConfigOpts{})
+}
+
+// CreateCryptoConfigWithOpts from the list of recipient strings and list of key paths of private keys
+// The opts parameter holds options necessary for de- and encryption, such as when using pkcs11 for example.
+func CreateCryptoConfigWithOpts(recipients []string, keys []string, opts CryptoConfigOpts) (encconfig.CryptoConfig, error) {
 	var decryptCc *encconfig.CryptoConfig
 	ccs := []encconfig.CryptoConfig{}
 	if len(keys) > 0 {
-		dcc, err := CreateDecryptCryptoConfig(keys, []string{})
+		dcc, err := CreateDecryptCryptoConfigWithOpts(keys, []string{}, opts)
 		if err != nil {
 			return encconfig.CryptoConfig{}, err
 		}
@@ -252,7 +295,7 @@ func CreateCryptoConfig(recipients []string, keys []string) (encconfig.CryptoCon
 	}
 
 	if len(recipients) > 0 {
-		gpgRecipients, pubKeys, x509s, err := processRecipientKeys(recipients)
+		gpgRecipients, pubKeys, x509s, pkcs11Pubkeys, pkcs11Yamls, err := processRecipientKeys(recipients)
 		if err != nil {
 			return encconfig.CryptoConfig{}, err
 		}
@@ -286,6 +329,13 @@ func CreateCryptoConfig(recipients []string, keys []string) (encconfig.CryptoCon
 			return encconfig.CryptoConfig{}, err
 		}
 		encryptCcs = append(encryptCcs, jweCc)
+
+		pkcs11Cc, err := encconfig.EncryptWithPkcs11(opts.Pkcs11Config, pkcs11Pubkeys, pkcs11Yamls)
+		if err != nil {
+			return encconfig.CryptoConfig{}, err
+		}
+		encryptCcs = append(encryptCcs, pkcs11Cc)
+
 		ecc := encconfig.CombineCryptoConfigs(encryptCcs)
 		if decryptCc != nil {
 			ecc.EncryptConfig.AttachDecryptConfig(decryptCc.DecryptConfig)

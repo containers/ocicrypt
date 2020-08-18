@@ -163,9 +163,9 @@ func IsPublicKey(data []byte) bool {
 	return err == nil
 }
 
-// IsPkcs11Uri returns true in case the given byte array is a pkcs11 URI
-func IsPkcs11Uri(data []byte) bool {
-	return pkcs11.IsPkcs11Uri(data)
+// IsPkcs11PublicKey returns true in case the given byte array represents a pkcs11 public key
+func IsPkcs11PublicKey(data []byte) bool {
+	return pkcs11.IsPkcs11PublicKey(data)
 }
 
 // ParseCertificate tries to parse a public key in DER format first and
