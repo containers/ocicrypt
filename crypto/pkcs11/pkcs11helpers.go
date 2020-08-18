@@ -59,11 +59,16 @@ var (
 	OAEPParams = []*pkcs11.OAEPParams{OAEPSha256Params, OAEPSha1Params}
 )
 
-// Pkcs11KeyFile describes the format of the pkcs11 (private) key file
+// Pkcs11KeyFile describes the format of the pkcs11 (private) key file.
+// It also carries pkcs11 module related environment variables that are transferred to the
+// Pkcs11URI object and activated when the pkcs11 module is used.
 type Pkcs11KeyFile struct {
 	Pkcs11 struct {
 		Uri string `yaml:"uri"`
 	} `yaml:"pkcs11"`
+	Module struct {
+		Env map[string]string `yaml:"env,omitempty"`
+	} `yaml:"module"`
 }
 
 // Pkcs11KeyFileObject is a representation of the Pkcs11KeyFile with the pkcs11 URI as an object
@@ -104,6 +109,7 @@ func ParsePkcs11KeyFile(yamlstr []byte) (*Pkcs11KeyFileObject, error) {
 	if err != nil {
 		return nil, err
 	}
+	p11uri.SetEnvMap(p11keyfile.Module.Env)
 
 	return &Pkcs11KeyFileObject{Uri: p11uri}, err
 }
