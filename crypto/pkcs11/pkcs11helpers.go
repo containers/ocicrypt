@@ -86,12 +86,6 @@ func ParsePkcs11Uri(uri string) (*pkcs11uri.Pkcs11URI, error) {
 	return p11uri, err
 }
 
-// IsPkcs11Uri returns true in case the given Uri is a Pkcs11 URI
-func IsPkcs11Uri(data []byte) bool {
-	_, err := ParsePkcs11Uri(string(data))
-	return err == nil
-}
-
 // ParsePkcs11KeyFile parses a pkcs11 key file holding a pkcs11 URI describing a private key.
 // The file has the following yaml format:
 // pkcs11:
@@ -114,8 +108,14 @@ func ParsePkcs11KeyFile(yamlstr []byte) (*Pkcs11KeyFileObject, error) {
 	return &Pkcs11KeyFileObject{Uri: p11uri}, err
 }
 
-// IsPkcs11PrivateKey checks whether the given YAML represents a Pkc11 private key
+// IsPkcs11PrivateKey checks whether the given YAML represents a Pkcs11 private key
 func IsPkcs11PrivateKey(yamlstr []byte) bool {
+	_, err := ParsePkcs11KeyFile(yamlstr)
+	return err == nil
+}
+
+// IsPkcs11PublicKey checks whether the given YAML represents a Pkcs11 public key
+func IsPkcs11PublicKey(yamlstr []byte) bool {
 	_, err := ParsePkcs11KeyFile(yamlstr)
 	return err == nil
 }
