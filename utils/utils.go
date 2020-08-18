@@ -173,6 +173,11 @@ func IsPublicKey(data []byte) bool {
 	return err == nil
 }
 
+// IsPkcs11Uri returns true in case the given byte array is a pkcs11 URI
+func IsPkcs11Uri(data []byte) bool {
+	return pkcs11.IsPkcs11Uri(data)
+}
+
 // ParseCertificate tries to parse a public key in DER format first and
 // PEM format after, returning an error if the parsing failed
 func ParseCertificate(certBytes []byte, prefix string) (*x509.Certificate, error) {
