@@ -130,11 +130,8 @@ func TestPkcs11EncryptDecrypt(t *testing.T) {
 	p11pubkeyuristr := runSoftHSMSetup(t)
 	defer runSoftHSMTeardown(t)
 
-	p11pubkeyuri, err := pkcs11uri.New()
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = p11pubkeyuri.Parse(p11pubkeyuristr)
+	p11pubkeyuri := pkcs11uri.New()
+	err := p11pubkeyuri.Parse(p11pubkeyuristr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +142,7 @@ func TestPkcs11EncryptDecrypt(t *testing.T) {
 	p11pubkeyuri.SetModuleDirectories(p11conf.ModuleDirectories)
 
 	pubKeys := make([]interface{}, 1)
-	pubKeys[0] = &p11pubkeyuri
+	pubKeys[0] = p11pubkeyuri
 	p11json, err := EncryptMultiple(pubKeys, []byte(testinput))
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +150,7 @@ func TestPkcs11EncryptDecrypt(t *testing.T) {
 
 	// for SoftHSM we can just reuse the public key URI
 	privKeys := make([]*pkcs11uri.Pkcs11URI, 1)
-	privKeys[0] = &p11pubkeyuri
+	privKeys[0] = p11pubkeyuri
 	plaintext, err := Decrypt(privKeys, p11json)
 	if err != nil {
 		t.Fatal(err)
@@ -192,10 +189,7 @@ func TestPkcs11EncryptDecryptPubkey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p11pubkeyuri, err := pkcs11uri.New()
-	if err != nil {
-		t.Fatal(err)
-	}
+	p11pubkeyuri := pkcs11uri.New()
 	err = p11pubkeyuri.Parse(p11pubkeyuristr)
 	if err != nil {
 		t.Fatal(err)
@@ -205,7 +199,7 @@ func TestPkcs11EncryptDecryptPubkey(t *testing.T) {
 
 	// for SoftHSM we can just reuse the public key URI
 	privKeys := make([]*pkcs11uri.Pkcs11URI, 1)
-	privKeys[0] = &p11pubkeyuri
+	privKeys[0] = p11pubkeyuri
 	plaintext, err := Decrypt(privKeys, p11json)
 	if err != nil {
 		t.Fatal(err)

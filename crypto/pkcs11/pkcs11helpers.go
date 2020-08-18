@@ -73,15 +73,12 @@ type Pkcs11KeyFileObject struct {
 
 // ParsePkcs11Uri parses a pkcs11 URI
 func ParsePkcs11Uri(uri string) (*pkcs11uri.Pkcs11URI, error) {
-	p11uri, err := pkcs11uri.New()
-	if err != nil {
-		return nil, errors.Wrapf(err, "Could not create Pkcs11URI object")
-	}
-	err = p11uri.Parse(uri)
+	p11uri := pkcs11uri.New()
+	err := p11uri.Parse(uri)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Could not parse Pkcs11URI from file")
 	}
-	return &p11uri, err
+	return p11uri, err
 }
 
 // IsPkcs11Uri returns true in case the given Uri is a Pkcs11 URI
