@@ -89,11 +89,12 @@ func TestParsePkcs11KeyFileBad(t *testing.T) {
 func TestPkcs11EncryptDecrypt(t *testing.T) {
 	// We always need the query attributes  'pin-value' and 'module-name'
 	// for SoftHSM2 the only other important attribute is 'object' (= the 'label')
-	p11pubkeyuristr, err := softhsm.RunSoftHSMSetup(SOFTHSM_SETUP)
+	shsm := softhsm.NewSoftHSMSetup()
+	p11pubkeyuristr, err := shsm.RunSoftHSMSetup(SOFTHSM_SETUP)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer softhsm.RunSoftHSMTeardown(SOFTHSM_SETUP)
+	defer shsm.RunSoftHSMTeardown(SOFTHSM_SETUP)
 
 	p11pubkeyuri := pkcs11uri.New()
 	err = p11pubkeyuri.Parse(p11pubkeyuristr)
@@ -105,6 +106,7 @@ func TestPkcs11EncryptDecrypt(t *testing.T) {
 
 	p11conf := getPkcs11Config(t)
 	p11pubkeyuri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11pubkeyuri.AddEnv("SOFTHSM2_CONF", shsm.GetConfigFilename())
 
 	pubKeys := make([]interface{}, 1)
 	pubKeys[0] = p11pubkeyuri
@@ -129,13 +131,14 @@ func TestPkcs11EncryptDecrypt(t *testing.T) {
 func TestPkcs11EncryptDecryptPubkey(t *testing.T) {
 	// We always need the query attributes  'pin-value' and 'module-name'
 	// for SoftHSM2 the only other important attribute is 'object' (= the 'label')
-	p11pubkeyuristr, err := softhsm.RunSoftHSMSetup(SOFTHSM_SETUP)
+	shsm := softhsm.NewSoftHSMSetup()
+	p11pubkeyuristr, err := shsm.RunSoftHSMSetup(SOFTHSM_SETUP)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer softhsm.RunSoftHSMTeardown(SOFTHSM_SETUP)
+	defer shsm.RunSoftHSMTeardown(SOFTHSM_SETUP)
 
-	pubkeypem, err := softhsm.RunSoftHSMGetPubkey(SOFTHSM_SETUP)
+	pubkeypem, err := shsm.RunSoftHSMGetPubkey(SOFTHSM_SETUP)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,6 +170,7 @@ func TestPkcs11EncryptDecryptPubkey(t *testing.T) {
 	}
 	p11conf := getPkcs11Config(t)
 	p11pubkeyuri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11pubkeyuri.AddEnv("SOFTHSM2_CONF", shsm.GetConfigFilename())
 
 	// for SoftHSM we can just reuse the public key URI
 	privKeys := make([]*pkcs11uri.Pkcs11URI, 1)

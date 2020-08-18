@@ -18,25 +18,50 @@ package softhsm
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/pkg/errors"
 )
 
+type SoftHSMSetup struct {
+	statedir string
+}
+
+func NewSoftHSMSetup() *SoftHSMSetup {
+	return &SoftHSMSetup{}
+}
+
+// GetConfigFilename returns the path to the softhsm configuration file; this function
+// may only be called after RunSoftHSMSetup
+func (s *SoftHSMSetup) GetConfigFilename() string {
+	return s.statedir + "/softhsm2.conf"
+}
+
 // RunSoftHSMSetup runs 'softhsm_setup setup' and returns the public key that was displayed
-func RunSoftHSMSetup(softhsmSetup string) (string, error) {
+func (s *SoftHSMSetup) RunSoftHSMSetup(softhsmSetup string) (string, error) {
+	statedir, err := ioutil.TempDir("", "ocicrypt")
+	if err != nil {
+		return "", errors.Wrapf(err, "Could not create temporary directory fot softhsm state")
+	}
+	s.statedir = statedir
+
 	cmd := exec.Command(softhsmSetup, "setup")
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := cmd.Run()
+	cmd.Env = append(cmd.Env, "SOFTHSM_SETUP_CONFIGDIR="+s.statedir)
+	err = cmd.Run()
 	if err != nil {
+		os.RemoveAll(s.statedir)
 		return "", errors.Wrapf(err, "%s setup failed: %s", softhsmSetup, out.String())
 	}
 
 	o := out.String()
 	idx := strings.Index(o, "pkcs11:")
 	if idx < 0 {
+		os.RemoveAll(s.statedir)
 		return "", errors.New("Could not find pkcs11 URI in output")
 	}
 
@@ -44,10 +69,11 @@ func RunSoftHSMSetup(softhsmSetup string) (string, error) {
 }
 
 // RunSoftHSMGetPubkey runs 'softhsm_setup getpubkey' and returns the public key
-func RunSoftHSMGetPubkey(softhsmSetup string) (string, error) {
+func (s *SoftHSMSetup) RunSoftHSMGetPubkey(softhsmSetup string) (string, error) {
 	cmd := exec.Command(softhsmSetup, "getpubkey")
 	var out bytes.Buffer
 	cmd.Stdout = &out
+	cmd.Env = append(cmd.Env, "SOFTHSM_SETUP_CONFIGDIR="+s.statedir)
 	err := cmd.Run()
 	if err != nil {
 		return "", errors.Wrapf(err, "%s getpubkey failed: %s", softhsmSetup, out.String())
@@ -57,7 +83,10 @@ func RunSoftHSMGetPubkey(softhsmSetup string) (string, error) {
 }
 
 // RunSoftHSMTeardown runs 'softhsm_setup teardown
-func RunSoftHSMTeardown(softhsmSetup string) {
+func (s *SoftHSMSetup) RunSoftHSMTeardown(softhsmSetup string) {
 	cmd := exec.Command(softhsmSetup, "teardown")
+	cmd.Env = append(cmd.Env, "SOFTHSM_SETUP_CONFIGDIR="+s.statedir)
 	_ = cmd.Run()
+
+	os.RemoveAll(s.statedir)
 }
