@@ -295,6 +295,9 @@ func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, la
 
 // publicEncryptOAEP uses a public key described by a pkcs11 URI to OAEP encrypt the given plaintext
 func publicEncryptOAEP(pubKey *pkcs11uri.Pkcs11URI, plaintext []byte) ([]byte, string, error) {
+	oldenv := setEnvVars(pubKey.GetEnvMap())
+	defer restoreEnv(oldenv)
+
 	p11ctx, session, err := pkcs11UriLogin(pubKey)
 	if err != nil {
 		return nil, "", err
@@ -336,6 +339,9 @@ func publicEncryptOAEP(pubKey *pkcs11uri.Pkcs11URI, plaintext []byte) ([]byte, s
 
 // privateDecryptOAEP uses a pkcs11 URI describing a private key to OAEP decrypt a ciphertext
 func privateDecryptOAEP(privKey *pkcs11uri.Pkcs11URI, ciphertext []byte, hashalg string) ([]byte, error) {
+	oldenv := setEnvVars(privKey.GetEnvMap())
+	defer restoreEnv(oldenv)
+
 	p11ctx, session, err := pkcs11UriLogin(privKey)
 	if err != nil {
 		return nil, err
