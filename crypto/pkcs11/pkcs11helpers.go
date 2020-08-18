@@ -96,6 +96,12 @@ func ParsePkcs11KeyFile(yamlstr []byte) (*Pkcs11KeyFileObject, error) {
 	return &Pkcs11KeyFileObject{Uri: &p11uri}, err
 }
 
+// IsPkcs11PrivateKey checks whether the given YAML represents a Pkc11 private key
+func IsPkcs11PrivateKey(yamlstr []byte) bool {
+	_, err := ParsePkcs11KeyFile(yamlstr)
+	return err == nil
+}
+
 // Pkcs11Config describes the layout of a pkcs11 config file
 // The file has the following yaml format:
 // module-directories:

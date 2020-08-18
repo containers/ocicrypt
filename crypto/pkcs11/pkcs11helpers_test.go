@@ -51,6 +51,10 @@ func TestParsePkcs11KeyFileGood(t *testing.T) {
 	data := `pkcs11:
    uri: pkcs11:slot-id=2053753261?module-name=softhsm2&pin-value=1234
 `
+	if !IsPkcs11PrivateKey([]byte(data)) {
+		t.Fatalf("YAML should have been detected as pkcs11 private key")
+	}
+
 	p11keyfileobj, err := ParsePkcs11KeyFile([]byte(data))
 	if err != nil {
 		t.Fatal(err)
@@ -73,6 +77,10 @@ func TestParsePkcs11KeyFileBad(t *testing.T) {
 	data := `pkcs11:
    uri: foobar
 `
+	if IsPkcs11PrivateKey([]byte(data)) {
+		t.Fatalf("Malformed pkcs11 key file should not have been detected as a pkcs11 private key")
+	}
+
 	_, err := ParsePkcs11KeyFile([]byte(data))
 	if err == nil {
 		t.Fatalf("Parsing the malformed pkcs11 key file should have failed")

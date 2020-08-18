@@ -141,6 +141,11 @@ func IsPrivateKey(data []byte, password []byte) (bool, error) {
 	return err == nil, err
 }
 
+// IsPkcs11PrivateKey returns true in case the given byte array represents a pkcs11 private key
+func IsPkcs11PrivateKey(data []byte) bool {
+	return pkcs11.IsPkcs11PrivateKey(data)
+}
+
 // ParsePublicKey tries to parse a public key in DER format first and
 // PEM format after, returning an error if the parsing failed
 func ParsePublicKey(pubKey []byte, prefix string) (interface{}, error) {
