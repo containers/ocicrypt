@@ -68,7 +68,23 @@ type Pkcs11KeyFile struct {
 
 // Pkcs11KeyFileObject is a representation of the Pkcs11KeyFile with the pkcs11 URI as an object
 type Pkcs11KeyFileObject struct {
-	uri pkcs11uri.Pkcs11URI
+	Uri *pkcs11uri.Pkcs11URI
+}
+
+// ParsePkcs11Uri parses a pkcs11 URI
+func ParsePkcs11Uri(uri string) (*pkcs11uri.Pkcs11URI, error) {
+	p11uri := pkcs11uri.New()
+	err := p11uri.Parse(uri)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Could not parse Pkcs11URI from file")
+	}
+	return p11uri, err
+}
+
+// IsPkcs11Uri returns true in case the given Uri is a Pkcs11 URI
+func IsPkcs11Uri(data []byte) bool {
+	_, err := ParsePkcs11Uri(string(data))
+	return err == nil
 }
 
 // ParsePkcs11KeyFile parses a pkcs11 key file holding a pkcs11 URI describing a private key.
@@ -84,16 +100,18 @@ func ParsePkcs11KeyFile(yamlstr []byte) (*Pkcs11KeyFileObject, error) {
 		return nil, errors.Wrapf(err, "Could not unmarshal pkcs11 keyfile")
 	}
 
-	p11uri, err := pkcs11uri.New()
+	p11uri, err := ParsePkcs11Uri(p11keyfile.Pkcs11.Uri)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Could not create Pkcs11URI object")
-	}
-	err = p11uri.Parse(p11keyfile.Pkcs11.Uri)
-	if err != nil {
-		return nil, errors.Wrapf(err, "Could not parse Pkcs11URI from file")
+		return nil, err
 	}
 
-	return &Pkcs11KeyFileObject{uri: p11uri}, err
+	return &Pkcs11KeyFileObject{Uri: p11uri}, err
+}
+
+// IsPkcs11PrivateKey checks whether the given YAML represents a Pkc11 private key
+func IsPkcs11PrivateKey(yamlstr []byte) bool {
+	_, err := ParsePkcs11KeyFile(yamlstr)
+	return err == nil
 }
 
 // Pkcs11Config describes the layout of a pkcs11 config file
@@ -277,6 +295,9 @@ func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, la
 
 // publicEncryptOAEP uses a public key described by a pkcs11 URI to OAEP encrypt the given plaintext
 func publicEncryptOAEP(pubKey *pkcs11uri.Pkcs11URI, plaintext []byte) ([]byte, string, error) {
+	oldenv := setEnvVars(pubKey.GetEnvMap())
+	defer restoreEnv(oldenv)
+
 	p11ctx, session, err := pkcs11UriLogin(pubKey)
 	if err != nil {
 		return nil, "", err
@@ -318,6 +339,9 @@ func publicEncryptOAEP(pubKey *pkcs11uri.Pkcs11URI, plaintext []byte) ([]byte, s
 
 // privateDecryptOAEP uses a pkcs11 URI describing a private key to OAEP decrypt a ciphertext
 func privateDecryptOAEP(privKey *pkcs11uri.Pkcs11URI, ciphertext []byte, hashalg string) ([]byte, error) {
+	oldenv := setEnvVars(privKey.GetEnvMap())
+	defer restoreEnv(oldenv)
+
 	p11ctx, session, err := pkcs11UriLogin(privKey)
 	if err != nil {
 		return nil, err

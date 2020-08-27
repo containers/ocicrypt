@@ -65,15 +65,12 @@ func parsePkcs11PrivateKeyYaml(yaml []byte, prefix string) (*pkcs11.Pkcs11KeyFil
 }
 
 // parsePkcs11URIPublicKey parses the input byte array as a pkcs11 URI describing a public key
-func parsePkcs11URIPublicKey(pkcs11uristr []byte, prefix string) (interface{}, error) {
-	p11uri, err := pkcs11uri.New()
-	if err != nil {
-		return p11uri, errors.Wrapf(err, "%s: Could not create Pkcs11URI object", prefix)
-	}
+func parsePkcs11URIPublicKey(pkcs11uristr []byte, prefix string) (*pkcs11uri.Pkcs11URI, error) {
+	p11uri := pkcs11uri.New()
 
-	err = p11uri.Parse(string(pkcs11uristr))
+	err := p11uri.Parse(string(pkcs11uristr))
 	if err != nil {
-		return p11uri, errors.Wrapf(err, "%s: Could not parse Pkcs11URI '%s'", prefix, pkcs11uristr)
+		return nil, errors.Wrapf(err, "%s: Could not parse Pkcs11URI '%s'", prefix, pkcs11uristr)
 	}
 	// if the URI does not have enough attributes, we will throw an error when encrypting
 	return p11uri, nil
@@ -141,6 +138,11 @@ func IsPrivateKey(data []byte, password []byte) (bool, error) {
 	return err == nil, err
 }
 
+// IsPkcs11PrivateKey returns true in case the given byte array represents a pkcs11 private key
+func IsPkcs11PrivateKey(data []byte) bool {
+	return pkcs11.IsPkcs11PrivateKey(data)
+}
+
 // ParsePublicKey tries to parse a public key in DER format first and
 // PEM format after, returning an error if the parsing failed
 func ParsePublicKey(pubKey []byte, prefix string) (interface{}, error) {
@@ -166,6 +168,11 @@ func ParsePublicKey(pubKey []byte, prefix string) (interface{}, error) {
 func IsPublicKey(data []byte) bool {
 	_, err := ParsePublicKey(data, "")
 	return err == nil
+}
+
+// IsPkcs11Uri returns true in case the given byte array is a pkcs11 URI
+func IsPkcs11Uri(data []byte) bool {
+	return pkcs11.IsPkcs11Uri(data)
 }
 
 // ParseCertificate tries to parse a public key in DER format first and

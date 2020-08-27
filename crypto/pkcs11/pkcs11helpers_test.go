@@ -17,14 +17,13 @@
 package pkcs11
 
 import (
-	"bytes"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/containers/ocicrypt/utils/softhsm"
 
 	pkcs11uri "github.com/stefanberger/go-pkcs11uri"
 )
@@ -51,15 +50,19 @@ func TestParsePkcs11KeyFileGood(t *testing.T) {
 	data := `pkcs11:
    uri: pkcs11:slot-id=2053753261?module-name=softhsm2&pin-value=1234
 `
+	if !IsPkcs11PrivateKey([]byte(data)) {
+		t.Fatalf("YAML should have been detected as pkcs11 private key")
+	}
+
 	p11keyfileobj, err := ParsePkcs11KeyFile([]byte(data))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	p11conf := getPkcs11Config(t)
-	p11keyfileobj.uri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11keyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
 
-	module, err := p11keyfileobj.uri.GetModule()
+	module, err := p11keyfileobj.Uri.GetModule()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,59 +76,27 @@ func TestParsePkcs11KeyFileBad(t *testing.T) {
 	data := `pkcs11:
    uri: foobar
 `
+	if IsPkcs11PrivateKey([]byte(data)) {
+		t.Fatalf("Malformed pkcs11 key file should not have been detected as a pkcs11 private key")
+	}
+
 	_, err := ParsePkcs11KeyFile([]byte(data))
 	if err == nil {
 		t.Fatalf("Parsing the malformed pkcs11 key file should have failed")
 	}
 }
 
-func runSoftHSMSetup(t *testing.T) string {
-	cmd := exec.Command(SOFTHSM_SETUP, "setup")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		fmt.Println(out.String())
-		t.Fatal(err)
-	}
-
-	o := out.String()
-	idx := strings.Index(o, "pkcs11:")
-	if idx < 0 {
-		t.Fatalf("Could not find pkcs11 URI in output")
-	}
-
-	return strings.TrimRight(o[idx:], "\n ")
-}
-
-func runSoftHSMGetPubkey(t *testing.T) string {
-	cmd := exec.Command(SOFTHSM_SETUP, "getpubkey")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		fmt.Println(out.String())
-		t.Fatal(err)
-	}
-
-	return out.String()
-}
-
-func runSoftHSMTeardown(t *testing.T) {
-	cmd := exec.Command(SOFTHSM_SETUP, "teardown")
-	_ = cmd.Run()
-}
-
 func TestPkcs11EncryptDecrypt(t *testing.T) {
 	// We always need the query attributes  'pin-value' and 'module-name'
 	// for SoftHSM2 the only other important attribute is 'object' (= the 'label')
-	p11pubkeyuristr := runSoftHSMSetup(t)
-	defer runSoftHSMTeardown(t)
-
-	p11pubkeyuri, err := pkcs11uri.New()
+	shsm := softhsm.NewSoftHSMSetup()
+	p11pubkeyuristr, err := shsm.RunSoftHSMSetup(SOFTHSM_SETUP)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer shsm.RunSoftHSMTeardown(SOFTHSM_SETUP)
+
+	p11pubkeyuri := pkcs11uri.New()
 	err = p11pubkeyuri.Parse(p11pubkeyuristr)
 	if err != nil {
 		t.Fatal(err)
@@ -135,9 +106,10 @@ func TestPkcs11EncryptDecrypt(t *testing.T) {
 
 	p11conf := getPkcs11Config(t)
 	p11pubkeyuri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11pubkeyuri.AddEnv("SOFTHSM2_CONF", shsm.GetConfigFilename())
 
 	pubKeys := make([]interface{}, 1)
-	pubKeys[0] = &p11pubkeyuri
+	pubKeys[0] = p11pubkeyuri
 	p11json, err := EncryptMultiple(pubKeys, []byte(testinput))
 	if err != nil {
 		t.Fatal(err)
@@ -145,7 +117,7 @@ func TestPkcs11EncryptDecrypt(t *testing.T) {
 
 	// for SoftHSM we can just reuse the public key URI
 	privKeys := make([]*pkcs11uri.Pkcs11URI, 1)
-	privKeys[0] = &p11pubkeyuri
+	privKeys[0] = p11pubkeyuri
 	plaintext, err := Decrypt(privKeys, p11json)
 	if err != nil {
 		t.Fatal(err)
@@ -159,10 +131,17 @@ func TestPkcs11EncryptDecrypt(t *testing.T) {
 func TestPkcs11EncryptDecryptPubkey(t *testing.T) {
 	// We always need the query attributes  'pin-value' and 'module-name'
 	// for SoftHSM2 the only other important attribute is 'object' (= the 'label')
-	p11pubkeyuristr := runSoftHSMSetup(t)
-	defer runSoftHSMTeardown(t)
+	shsm := softhsm.NewSoftHSMSetup()
+	p11pubkeyuristr, err := shsm.RunSoftHSMSetup(SOFTHSM_SETUP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer shsm.RunSoftHSMTeardown(SOFTHSM_SETUP)
 
-	pubkeypem := runSoftHSMGetPubkey(t)
+	pubkeypem, err := shsm.RunSoftHSMGetPubkey(SOFTHSM_SETUP)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	block, _ := pem.Decode([]byte(pubkeypem))
 	if block == nil {
@@ -184,20 +163,18 @@ func TestPkcs11EncryptDecryptPubkey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p11pubkeyuri, err := pkcs11uri.New()
-	if err != nil {
-		t.Fatal(err)
-	}
+	p11pubkeyuri := pkcs11uri.New()
 	err = p11pubkeyuri.Parse(p11pubkeyuristr)
 	if err != nil {
 		t.Fatal(err)
 	}
 	p11conf := getPkcs11Config(t)
 	p11pubkeyuri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11pubkeyuri.AddEnv("SOFTHSM2_CONF", shsm.GetConfigFilename())
 
 	// for SoftHSM we can just reuse the public key URI
 	privKeys := make([]*pkcs11uri.Pkcs11URI, 1)
-	privKeys[0] = &p11pubkeyuri
+	privKeys[0] = p11pubkeyuri
 	plaintext, err := Decrypt(privKeys, p11json)
 	if err != nil {
 		t.Fatal(err)
