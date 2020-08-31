@@ -112,7 +112,10 @@ module:
     env:
       SOFTHSM2_CONF: ` + shsm.GetConfigFilename()
 
-	p11keyfileobj, err := ParsePkcs11KeyFile([]byte(data))
+	// deactivate the PIN value
+	pubkeydata := strings.Replace(data, "pin-value", "unused", 1)
+
+	p11pubkeyfileobj, err := ParsePkcs11KeyFile([]byte(pubkeydata))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,17 +123,23 @@ module:
 	testinput := "Hello World!"
 
 	p11conf := getPkcs11Config(t)
-	p11keyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11pubkeyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
 
 	pubKeys := make([]interface{}, 1)
-	pubKeys[0] = p11keyfileobj
+	pubKeys[0] = p11pubkeyfileobj
 	p11json, err := EncryptMultiple(pubKeys, []byte(testinput))
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	p11privkeyfileobj, err := ParsePkcs11KeyFile([]byte(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p11privkeyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
+
 	privKeys := make([]*Pkcs11KeyFileObject, 1)
-	privKeys[0] = p11keyfileobj
+	privKeys[0] = p11privkeyfileobj
 	plaintext, err := Decrypt(privKeys, p11json)
 	if err != nil {
 		t.Fatal(err)
