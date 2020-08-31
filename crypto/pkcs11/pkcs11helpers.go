@@ -168,10 +168,20 @@ func rsaPublicEncryptOAEP(pubKey *rsa.PublicKey, plaintext []byte) ([]byte, stri
 
 // pkcs11UriGetLoginParameters gets the parameters necessary for login from the Pkcs11URI
 // PIN and module are mandatory; slot-id is optional and if not found -1 will be returned
-func pkcs11UriGetLoginParameters(p11uri *pkcs11uri.Pkcs11URI) (string, string, int64, error) {
-	pin, err := p11uri.GetPIN()
-	if err != nil {
-		return "", "", 0, errors.Wrap(err, "No PIN available in pkcs11 URI")
+// For a privateKeyOperation a PIN is required and if none is given, this function will return an error
+func pkcs11UriGetLoginParameters(p11uri *pkcs11uri.Pkcs11URI, privateKeyOperation bool) (string, string, int64, error) {
+	var (
+		pin string
+		err error
+	)
+	if privateKeyOperation {
+		if !p11uri.HasPIN() {
+			return "", "", 0, errors.New("Missing PIN for private key operation")
+		}
+		pin, err = p11uri.GetPIN()
+		if err != nil {
+			return "", "", 0, errors.Wrap(err, "Could not get PIN needed for private key operation")
+		}
 	}
 
 	module, err := p11uri.GetModule()
@@ -213,10 +223,12 @@ func pkcs11OpenSession(p11ctx *pkcs11.Ctx, slotid uint, pin string) (session pkc
 	if err != nil {
 		return 0, errors.Wrapf(err, "OpenSession to slot %d failed", slotid)
 	}
-	err = p11ctx.Login(session, pkcs11.CKU_USER, pin)
-	if err != nil {
-		_ = p11ctx.CloseSession(session)
-		return 0, errors.Wrap(err, "Could not login to device")
+	if len(pin) > 0 {
+		err = p11ctx.Login(session, pkcs11.CKU_USER, pin)
+		if err != nil {
+			_ = p11ctx.CloseSession(session)
+			return 0, errors.Wrap(err, "Could not login to device")
+		}
 	}
 	return session, nil
 }
@@ -224,8 +236,8 @@ func pkcs11OpenSession(p11ctx *pkcs11.Ctx, slotid uint, pin string) (session pkc
 // pkcs11UriLogin uses the given pkcs11 URI to select the pkcs11 module (share libary) and to get
 // the PIN to use for login; if the URI contains a slot-id, the given slot-id will be used, otherwise
 // one slot after the other will be attempted and the first one where login succeeds will be used
-func pkcs11UriLogin(p11uri *pkcs11uri.Pkcs11URI) (ctx *pkcs11.Ctx, session pkcs11.SessionHandle, err error) {
-	pin, module, slotid, err := pkcs11UriGetLoginParameters(p11uri)
+func pkcs11UriLogin(p11uri *pkcs11uri.Pkcs11URI, privateKeyOperation bool) (ctx *pkcs11.Ctx, session pkcs11.SessionHandle, err error) {
+	pin, module, slotid, err := pkcs11UriGetLoginParameters(p11uri, privateKeyOperation)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -258,7 +270,10 @@ func pkcs11UriLogin(p11uri *pkcs11uri.Pkcs11URI) (ctx *pkcs11.Ctx, session pkcs1
 				return p11ctx, session, err
 			}
 		}
-		return nil, 0, errors.New("Could not log in to any slots")
+		if len(pin) > 0 {
+			return nil, 0, errors.New("Could not create session to any slot and/or log in")
+		}
+		return nil, 0, errors.New("Could not create session to any slot")
 	}
 }
 
@@ -300,7 +315,7 @@ func publicEncryptOAEP(pubKey *Pkcs11KeyFileObject, plaintext []byte) ([]byte, s
 	oldenv := setEnvVars(pubKey.Uri.GetEnvMap())
 	defer restoreEnv(oldenv)
 
-	p11ctx, session, err := pkcs11UriLogin(pubKey.Uri)
+	p11ctx, session, err := pkcs11UriLogin(pubKey.Uri, false)
 	if err != nil {
 		return nil, "", err
 	}
@@ -344,7 +359,7 @@ func privateDecryptOAEP(privKeyObj *Pkcs11KeyFileObject, ciphertext []byte, hash
 	oldenv := setEnvVars(privKeyObj.Uri.GetEnvMap())
 	defer restoreEnv(oldenv)
 
-	p11ctx, session, err := pkcs11UriLogin(privKeyObj.Uri)
+	p11ctx, session, err := pkcs11UriLogin(privKeyObj.Uri, true)
 	if err != nil {
 		return nil, err
 	}
