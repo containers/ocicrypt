@@ -207,6 +207,20 @@ func pkcs11UriGetKeyLabel(p11uri *pkcs11uri.Pkcs11URI) (string, error) {
 	return serial, nil
 }
 
+// pkcs11OpenSession opens a session with a pkcs11 device at the given slot and logs in with the given PIN
+func pkcs11OpenSession(p11ctx *pkcs11.Ctx, slotid uint, pin string) (session pkcs11.SessionHandle, err error) {
+	session, err = p11ctx.OpenSession(uint(slotid), pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	if err != nil {
+		return 0, errors.Wrapf(err, "OpenSession to slot %d failed", slotid)
+	}
+	err = p11ctx.Login(session, pkcs11.CKU_USER, pin)
+	if err != nil {
+		_ = p11ctx.CloseSession(session)
+		return 0, errors.Wrap(err, "Could not login to device")
+	}
+	return session, nil
+}
+
 // pkcs11UriLogin uses the given pkcs11 URI to select the pkcs11 module (share libary) and to get
 // the PIN to use for login; if the URI contains a slot-id, the given slot-id will be used, otherwise
 // one slot after the other will be attempted and the first one where login succeeds will be used
@@ -230,40 +244,22 @@ func pkcs11UriLogin(p11uri *pkcs11uri.Pkcs11URI) (ctx *pkcs11.Ctx, session pkcs1
 	}
 
 	if slotid >= 0 {
-		session, err = p11ctx.OpenSession(uint(slotid), pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
-		if err != nil {
-			return nil, 0, errors.Wrapf(err, "OpenSession to slot %d failed", slotid)
-		}
-		err = p11ctx.Login(session, pkcs11.CKU_USER, pin)
-		if err != nil {
-			_ = p11ctx.CloseSession(session)
-			return nil, 0, errors.Wrap(err, "Could not login to device")
-		}
+		session, err := pkcs11OpenSession(p11ctx, uint(slotid), pin)
+		return p11ctx, session, err
 	} else {
 		slots, err := p11ctx.GetSlotList(true)
 		if err != nil {
 			return nil, 0, errors.Wrap(err, "GetSlotList failed")
 		}
 
-		loggedin := false
 		for _, slot := range slots {
-			session, err = p11ctx.OpenSession(slot, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
-			if err != nil {
-				continue
-			}
-			err = p11ctx.Login(session, pkcs11.CKU_USER, pin)
+			session, err = pkcs11OpenSession(p11ctx, slot, pin)
 			if err == nil {
-				loggedin = true
-				break
+				return p11ctx, session, err
 			}
-			_ = p11ctx.CloseSession(session)
 		}
-		if !loggedin {
-			return nil, 0, errors.New("Could not log in to any slots")
-		}
+		return nil, 0, errors.New("Could not log in to any slots")
 	}
-
-	return p11ctx, session, nil
 }
 
 func pkcs11Logout(ctx *pkcs11.Ctx, session pkcs11.SessionHandle) {
@@ -300,17 +296,17 @@ func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, la
 }
 
 // publicEncryptOAEP uses a public key described by a pkcs11 URI to OAEP encrypt the given plaintext
-func publicEncryptOAEP(pubKey *pkcs11uri.Pkcs11URI, plaintext []byte) ([]byte, string, error) {
-	oldenv := setEnvVars(pubKey.GetEnvMap())
+func publicEncryptOAEP(pubKey *Pkcs11KeyFileObject, plaintext []byte) ([]byte, string, error) {
+	oldenv := setEnvVars(pubKey.Uri.GetEnvMap())
 	defer restoreEnv(oldenv)
 
-	p11ctx, session, err := pkcs11UriLogin(pubKey)
+	p11ctx, session, err := pkcs11UriLogin(pubKey.Uri)
 	if err != nil {
 		return nil, "", err
 	}
 	defer pkcs11Logout(p11ctx, session)
 
-	label, err := pkcs11UriGetKeyLabel(pubKey)
+	label, err := pkcs11UriGetKeyLabel(pubKey.Uri)
 	if err != nil {
 		return nil, "", err
 	}
@@ -344,17 +340,17 @@ func publicEncryptOAEP(pubKey *pkcs11uri.Pkcs11URI, plaintext []byte) ([]byte, s
 }
 
 // privateDecryptOAEP uses a pkcs11 URI describing a private key to OAEP decrypt a ciphertext
-func privateDecryptOAEP(privKey *pkcs11uri.Pkcs11URI, ciphertext []byte, hashalg string) ([]byte, error) {
-	oldenv := setEnvVars(privKey.GetEnvMap())
+func privateDecryptOAEP(privKeyObj *Pkcs11KeyFileObject, ciphertext []byte, hashalg string) ([]byte, error) {
+	oldenv := setEnvVars(privKeyObj.Uri.GetEnvMap())
 	defer restoreEnv(oldenv)
 
-	p11ctx, session, err := pkcs11UriLogin(privKey)
+	p11ctx, session, err := pkcs11UriLogin(privKeyObj.Uri)
 	if err != nil {
 		return nil, err
 	}
 	defer pkcs11Logout(p11ctx, session)
 
-	label, err := pkcs11UriGetKeyLabel(privKey)
+	label, err := pkcs11UriGetKeyLabel(privKeyObj.Uri)
 	if err != nil {
 		return nil, err
 	}
@@ -424,7 +420,7 @@ func EncryptMultiple(pubKeys []interface{}, data []byte) ([]byte, error) {
 		switch pkey := pubKey.(type) {
 		case *rsa.PublicKey:
 			ciphertext, hashalg, err = rsaPublicEncryptOAEP(pkey, data)
-		case *pkcs11uri.Pkcs11URI:
+		case *Pkcs11KeyFileObject:
 			ciphertext, hashalg, err = publicEncryptOAEP(pkey, data)
 		default:
 			err = errors.Errorf("Unsupported key object type for pkcs11 public key")
@@ -460,7 +456,7 @@ func EncryptMultiple(pubKeys []interface{}, data []byte) ([]byte, error) {
 //     } ,
 //     [...]
 // }
-func Decrypt(privKeys []*pkcs11uri.Pkcs11URI, pkcs11blobstr []byte) ([]byte, error) {
+func Decrypt(privKeyObjs []*Pkcs11KeyFileObject, pkcs11blobstr []byte) ([]byte, error) {
 	pkcs11blob := Pkcs11Blob{}
 	err := json.Unmarshal(pkcs11blobstr, &pkcs11blob)
 	if err != nil {
@@ -478,13 +474,16 @@ func Decrypt(privKeys []*pkcs11uri.Pkcs11URI, pkcs11blobstr []byte) ([]byte, err
 			continue
 		}
 		// try all keys until one works
-		for _, privKey := range privKeys {
-			plaintext, err := privateDecryptOAEP(privKey, ciphertext, recipient.Hash)
+		for _, privKeyObj := range privKeyObjs {
+			plaintext, err := privateDecryptOAEP(privKeyObj, ciphertext, recipient.Hash)
 			if err == nil {
 				return plaintext, nil
 			}
-			uri, _ := privKey.Format()
-			errs += fmt.Sprintf("%s : %s\n", uri, err)
+			if uri, err2 := privKeyObj.Uri.Format(); err2 == nil {
+				errs += fmt.Sprintf("%s : %s\n", uri, err)
+			} else {
+				errs += fmt.Sprintf("%s\n", err)
+			}
 		}
 	}
 
