@@ -27,7 +27,6 @@ import (
 	"github.com/containers/ocicrypt/crypto/pkcs11"
 
 	"github.com/pkg/errors"
-	pkcs11uri "github.com/stefanberger/go-pkcs11uri"
 	"golang.org/x/crypto/openpgp"
 	json "gopkg.in/square/go-jose.v2"
 )
@@ -64,16 +63,10 @@ func parsePkcs11PrivateKeyYaml(yaml []byte, prefix string) (*pkcs11.Pkcs11KeyFil
 	return pkcs11.ParsePkcs11KeyFile(yaml)
 }
 
-// parsePkcs11URIPublicKey parses the input byte array as a pkcs11 URI describing a public key
-func parsePkcs11URIPublicKey(pkcs11uristr []byte, prefix string) (*pkcs11uri.Pkcs11URI, error) {
-	p11uri := pkcs11uri.New()
-
-	err := p11uri.Parse(string(pkcs11uristr))
-	if err != nil {
-		return nil, errors.Wrapf(err, "%s: Could not parse Pkcs11URI '%s'", prefix, pkcs11uristr)
-	}
-	// if the URI does not have enough attributes, we will throw an error when encrypting
-	return p11uri, nil
+// parsePkcs11URIPublicKey parses the input byte array as a pkcs11 key file yaml
+func parsePkcs11PublicKeyYaml(yaml []byte, prefix string) (*pkcs11.Pkcs11KeyFileObject, error) {
+	// if the URI does not have enough attributes, we will throw an error when decrypting
+	return pkcs11.ParsePkcs11KeyFile(yaml)
 }
 
 // IsPasswordError checks whether an error is related to a missing or wrong
@@ -157,7 +150,7 @@ func ParsePublicKey(pubKey []byte, prefix string) (interface{}, error) {
 		} else {
 			key, err = parseJWKPublicKey(pubKey, prefix)
 			if err != nil {
-				key, err = parsePkcs11URIPublicKey(pubKey, prefix)
+				key, err = parsePkcs11PublicKeyYaml(pubKey, prefix)
 			}
 		}
 	}
