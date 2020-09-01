@@ -20,6 +20,8 @@ github.com/stefanberger/go-pkcs11uri v0.0.0-20200729195014-78529f99efb9 h1:obdZ/
 github.com/stefanberger/go-pkcs11uri v0.0.0-20200729195014-78529f99efb9/go.mod h1:AO3tvPzVZ/ayst6UlUKUv6rcPQInYe3IknH3jYhAKu8=
 github.com/stefanberger/go-pkcs11uri v0.0.0-20200818151115-15fd140e77b8 h1:xx8nqSsQV45UpCNm+2GcyQDZgG3cVuv24sXNgg35T5E=
 github.com/stefanberger/go-pkcs11uri v0.0.0-20200818151115-15fd140e77b8/go.mod h1:AO3tvPzVZ/ayst6UlUKUv6rcPQInYe3IknH3jYhAKu8=
+github.com/stefanberger/go-pkcs11uri v0.0.0-20200901134020-a3ec7c3624da h1:nG+J2N1b1YswENeVYY+cHaj/PHvn8EFPMjMmk5vmZTc=
+github.com/stefanberger/go-pkcs11uri v0.0.0-20200901134020-a3ec7c3624da/go.mod h1:AO3tvPzVZ/ayst6UlUKUv6rcPQInYe3IknH3jYhAKu8=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
