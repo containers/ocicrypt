@@ -30,7 +30,7 @@ var (
 	SOFTHSM_SETUP = "../../scripts/softhsm_setup"
 )
 
-func getPkcs11Config(t *testing.T) Pkcs11Config {
+func getPkcs11Config(t *testing.T) *Pkcs11Config {
 	// we need to provide a configuration file so that on the various distros
 	// the libsofthsm2.so will be found by searching directories
 	config := `module-directories:

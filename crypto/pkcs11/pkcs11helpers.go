@@ -133,14 +133,14 @@ type Pkcs11Config struct {
 
 // ParsePkcs11ConfigFile parses a pkcs11 config file hat influences the module search behavior
 // as well as the set of modules that users are allowed to use
-func ParsePkcs11ConfigFile(yamlstr []byte) (Pkcs11Config, error) {
+func ParsePkcs11ConfigFile(yamlstr []byte) (*Pkcs11Config, error) {
 	p11conf := Pkcs11Config{}
 
 	err := yaml.Unmarshal([]byte(yamlstr), &p11conf)
 	if err != nil {
-		return p11conf, errors.Wrapf(err, "Could not parse Pkcs11Config")
+		return &p11conf, errors.Wrapf(err, "Could not parse Pkcs11Config")
 	}
-	return p11conf, nil
+	return &p11conf, nil
 }
 
 // rsaPublicEncryptOAEP encrypts the given plaintext with the given *rsa.PublicKey; the
