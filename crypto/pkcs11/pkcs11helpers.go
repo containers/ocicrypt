@@ -295,7 +295,7 @@ func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, la
 		return 0, errors.Wrap(err, "FindObjectsInit failed")
 	}
 
-	obj, _, err := p11ctx.FindObjects(session, 1)
+	obj, _, err := p11ctx.FindObjects(session, 100)
 	if err != nil {
 		return 0, errors.Wrap(err, "FindObjects failed")
 	}
@@ -303,7 +303,9 @@ func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, la
 	if err := p11ctx.FindObjectsFinal(session); err != nil {
 		return 0, errors.Wrap(err, "FindObjectsFinal failed")
 	}
-	if len(obj) > 0 {
+	if len(obj) > 1 {
+		return 0, errors.Errorf("There are too many (=%d) keys with label '%s'", len(obj), label)
+	} else if len(obj) == 1 {
 		return obj[0], nil
 	}
 
