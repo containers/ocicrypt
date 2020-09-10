@@ -230,7 +230,7 @@ func CreateDecryptCryptoConfigWithOpts(keys []string, decRecipients []string, op
 	_, err = createGPGClient(context)
 	gpgInstalled := err == nil
 	if gpgInstalled {
-		if len(gpgSecretKeyRingFiles) == 0 && len(privKeys) == 0 && descs != nil {
+		if len(gpgSecretKeyRingFiles) == 0 && len(privKeys) == 0 && len(pkcs11Yamls) == 0 && descs != nil {
 			// Get pgp private keys from keyring only if no private key was passed
 			gpgPrivKeys, gpgPrivKeyPasswords, err := getGPGPrivateKeys(context, gpgSecretKeyRingFiles, descs, true)
 			if err != nil {
