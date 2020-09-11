@@ -208,13 +208,14 @@ func pkcs11UriGetLoginParameters(p11uri *pkcs11uri.Pkcs11URI, privateKeyOperatio
 	return pin, module, slotid, nil
 }
 
-// pkcs11UriGetKeyLabel gets the key label by retrieving the value of the 'object' attribute
-func pkcs11UriGetKeyLabel(p11uri *pkcs11uri.Pkcs11URI) (string, error) {
-	serial, ok := p11uri.GetPathAttribute("object", false)
-	if !ok {
-		return "", errors.New("No 'object' attribute found in pkcs11 URI")
+// pkcs11UriGetKeyIdAndLabel gets the key label by retrieving the value of the 'object' attribute
+func pkcs11UriGetKeyIdAndLabel(p11uri *pkcs11uri.Pkcs11URI) (string, string, error) {
+	keyid, ok2 := p11uri.GetPathAttribute("id", false)
+	label, ok1 := p11uri.GetPathAttribute("object", false)
+	if !ok1 && !ok2 {
+		return "", "", errors.New("Neither 'id' nor 'object' attributes were found in pkcs11 URI")
 	}
-	return serial, nil
+	return keyid, label, nil
 }
 
 // pkcs11OpenSession opens a session with a pkcs11 device at the given slot and logs in with the given PIN
@@ -284,11 +285,23 @@ func pkcs11Logout(ctx *pkcs11.Ctx, session pkcs11.SessionHandle) {
 	ctx.Destroy()
 }
 
-// findObject finds an object of the given class with the given label
-func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, label string) (pkcs11.ObjectHandle, error) {
+// findObject finds an object of the given class with the given keyid and/or label
+func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, keyid, label string) (pkcs11.ObjectHandle, error) {
+	msg := ""
+
 	template := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, class),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, label),
+	}
+	if len(label) > 0 {
+		template = append(template, pkcs11.NewAttribute(pkcs11.CKA_LABEL, label))
+		msg = fmt.Sprintf("label '%s'", label)
+	}
+	if len(keyid) > 0 {
+		template = append(template, pkcs11.NewAttribute(pkcs11.CKA_ID, keyid))
+		if len(msg) > 0 {
+			msg += " and "
+		}
+		msg += fmt.Sprintf("id '%s'", keyid)
 	}
 
 	if err := p11ctx.FindObjectsInit(session, template); err != nil {
@@ -304,12 +317,12 @@ func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, la
 		return 0, errors.Wrap(err, "FindObjectsFinal failed")
 	}
 	if len(obj) > 1 {
-		return 0, errors.Errorf("There are too many (=%d) keys with label '%s'", len(obj), label)
+		return 0, errors.Errorf("There are too many (=%d) keys with %s", len(obj), msg)
 	} else if len(obj) == 1 {
 		return obj[0], nil
 	}
 
-	return 0, errors.Errorf("Could not find any object with the label '%s'", label)
+	return 0, errors.Errorf("Could not find any object with %s", msg)
 }
 
 // publicEncryptOAEP uses a public key described by a pkcs11 URI to OAEP encrypt the given plaintext
@@ -323,12 +336,12 @@ func publicEncryptOAEP(pubKey *Pkcs11KeyFileObject, plaintext []byte) ([]byte, s
 	}
 	defer pkcs11Logout(p11ctx, session)
 
-	label, err := pkcs11UriGetKeyLabel(pubKey.Uri)
+	keyid, label, err := pkcs11UriGetKeyIdAndLabel(pubKey.Uri)
 	if err != nil {
 		return nil, "", err
 	}
 
-	p11PubKey, err := findObject(p11ctx, session, pkcs11.CKO_PUBLIC_KEY, label)
+	p11PubKey, err := findObject(p11ctx, session, pkcs11.CKO_PUBLIC_KEY, keyid, label)
 	if err != nil {
 		return nil, "", err
 	}
@@ -367,12 +380,12 @@ func privateDecryptOAEP(privKeyObj *Pkcs11KeyFileObject, ciphertext []byte, hash
 	}
 	defer pkcs11Logout(p11ctx, session)
 
-	label, err := pkcs11UriGetKeyLabel(privKeyObj.Uri)
+	keyid, label, err := pkcs11UriGetKeyIdAndLabel(privKeyObj.Uri)
 	if err != nil {
 		return nil, err
 	}
 
-	p11PrivKey, err := findObject(p11ctx, session, pkcs11.CKO_PRIVATE_KEY, label)
+	p11PrivKey, err := findObject(p11ctx, session, pkcs11.CKO_PRIVATE_KEY, keyid, label)
 	if err != nil {
 		return nil, err
 	}
