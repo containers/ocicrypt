@@ -265,7 +265,17 @@ func pkcs11UriLogin(p11uri *pkcs11uri.Pkcs11URI, privateKeyOperation bool) (ctx 
 			return nil, 0, errors.Wrap(err, "GetSlotList failed")
 		}
 
+		tokenlabel, ok := p11uri.GetPathAttribute("token", false)
+		if !ok {
+			return nil, 0, errors.New("Missing 'token' attribute since 'slot-id' was not given")
+		}
+
 		for _, slot := range slots {
+			ti, err := p11ctx.GetTokenInfo(slot)
+			if err != nil || ti.Label != tokenlabel {
+				continue
+			}
+
 			session, err = pkcs11OpenSession(p11ctx, slot, pin)
 			if err == nil {
 				return p11ctx, session, err
