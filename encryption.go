@@ -19,6 +19,7 @@ package ocicrypt
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 
@@ -193,6 +194,7 @@ func DecryptLayer(dc *config.DecryptConfig, encLayerReader io.Reader, desc ocisp
 
 func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) ([]byte, error) {
 	privKeyGiven := false
+	errs := ""
 	for annotationsID, scheme := range keyWrapperAnnotations {
 		b64Annotation := desc.Annotations[annotationsID]
 		if b64Annotation != "" {
@@ -209,6 +211,7 @@ func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) 
 			optsData, err := preUnwrapKey(keywrapper, dc, b64Annotation)
 			if err != nil {
 				// try next keywrap.KeyWrapper
+				errs += fmt.Sprintf("%s\n", err)
 				continue
 			}
 			if optsData == nil {
@@ -221,7 +224,7 @@ func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) 
 	if !privKeyGiven {
 		return nil, errors.New("missing private key needed for decryption")
 	}
-	return nil, errors.Errorf("no suitable key unwrapper found or none of the private keys could be used for decryption")
+	return nil, errors.Errorf("no suitable key unwrapper found or none of the private keys could be used for decryption:\n%s", errs)
 }
 
 func getLayerPubOpts(desc ocispec.Descriptor) ([]byte, error) {
@@ -239,6 +242,7 @@ func preUnwrapKey(keywrapper keywrap.KeyWrapper, dc *config.DecryptConfig, b64An
 	if b64Annotations == "" {
 		return nil, nil
 	}
+	errs := ""
 	for _, b64Annotation := range strings.Split(b64Annotations, ",") {
 		annotation, err := base64.StdEncoding.DecodeString(b64Annotation)
 		if err != nil {
@@ -246,11 +250,12 @@ func preUnwrapKey(keywrapper keywrap.KeyWrapper, dc *config.DecryptConfig, b64An
 		}
 		optsData, err := keywrapper.UnwrapKey(dc, annotation)
 		if err != nil {
+			errs += fmt.Sprintf("- %s\n", err)
 			continue
 		}
 		return optsData, nil
 	}
-	return nil, errors.New("no suitable key found for decrypting layer key")
+	return nil, errors.Errorf("no suitable key found for decrypting layer key:\n%s", errs)
 }
 
 // commonEncryptLayer is a function to encrypt the plain layer using a new random
