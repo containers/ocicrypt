@@ -39,7 +39,7 @@ var (
 	// OAEPLabel defines the label we use for OAEP encryption; this cannot be changed
 	OAEPLabel = []byte("")
 	// OAEPDefaultHash defines the default hash used for OAEP encryption; this cannot be changed
-	OAEPDefaultHash = "sha256"
+	OAEPDefaultHash = "sha1"
 
 	// OAEPSha1Params describes the OAEP parameters with sha1 hash algorithm; needed by SoftHSM
 	OAEPSha1Params = &pkcs11.OAEPParams{
@@ -55,8 +55,6 @@ var (
 		SourceType: pkcs11.CKZ_DATA_SPECIFIED,
 		SourceData: OAEPLabel,
 	}
-	// OEPParams is an array Of OAEP parameters in order we will try to use them
-	OAEPParams = []*pkcs11.OAEPParams{OAEPSha256Params, OAEPSha1Params}
 )
 
 // Pkcs11KeyFile describes the format of the pkcs11 (private) key file.
@@ -147,16 +145,22 @@ func ParsePkcs11ConfigFile(yamlstr []byte) (*Pkcs11Config, error) {
 // environment variable OCICRYPT_OAEP_HASHALG can be set to 'sha1' to force usage of sha1 for OAEP (SoftHSM).
 // This function is needed by clients who are using a public key file for pkcs11 encryption
 func rsaPublicEncryptOAEP(pubKey *rsa.PublicKey, plaintext []byte) ([]byte, string, error) {
-	var hashfunc hash.Hash
-	hashalg := OAEPDefaultHash
+	var (
+		hashfunc hash.Hash
+		hashalg  string
+	)
 
-	// for SoftHSM support we allow the user to choose sha1 as the hash algorithm
-	switch strings.ToLower(os.Getenv("OCICRYPT_OAEP_HASHALG")) {
-	case "sha1":
+	oaephash := os.Getenv("OCICRYPT_OAEP_HASHALG")
+	// The default is 'sha1'
+	switch strings.ToLower(oaephash) {
+	case "sha1", "":
 		hashfunc = sha1.New()
 		hashalg = "sha1"
-	default:
+	case "sha256":
 		hashfunc = sha256.New()
+		hashalg = "sha256"
+	default:
+		return nil, "", errors.Errorf("Unsupported OAEP hash '%s'", oaephash)
 	}
 	ciphertext, err := rsa.EncryptOAEP(hashfunc, rand.Reader, pubKey, plaintext, OAEPLabel)
 	if err != nil {
@@ -179,7 +183,7 @@ func pkcs11UriGetLoginParameters(p11uri *pkcs11uri.Pkcs11URI, privateKeyOperatio
 			return "", "", 0, errors.New("Missing PIN for private key operation")
 		}
 	}
-	 // some devices require a PIN to find a *public* key object, others don't
+	// some devices require a PIN to find a *public* key object, others don't
 	pin, _ = p11uri.GetPIN()
 
 	module, err := p11uri.GetModule()
@@ -354,18 +358,23 @@ func publicEncryptOAEP(pubKey *Pkcs11KeyFileObject, plaintext []byte) ([]byte, s
 		return nil, "", err
 	}
 
-	hashalg := OAEPDefaultHash
+	var hashalg string
 
-	// SoftHSM only accepts sha1 for OAEP; nevertheless we try sha256 first, and fall back to sha1 otherwise
-	for _, oaep := range OAEPParams {
-		err = p11ctx.EncryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, oaep)}, p11PubKey)
-		if err == nil {
-			if oaep.HashAlg == pkcs11.CKM_SHA_1 {
-				hashalg = "sha1"
-			}
-			break
-		}
+	var oaep *pkcs11.OAEPParams
+	oaephash := os.Getenv("OCICRYPT_OAEP_HASHALG")
+	// the default is sha1
+	switch strings.ToLower(oaephash) {
+	case "sha1", "":
+		oaep = OAEPSha1Params
+		hashalg = "sha1"
+	case "sha256":
+		oaep = OAEPSha256Params
+		hashalg = "sha256"
+	default:
+		return nil, "", errors.Errorf("Unsupported OAEP hash '%s'", oaephash)
 	}
+
+	err = p11ctx.EncryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, oaep)}, p11PubKey)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "EncryptInit error")
 	}
@@ -398,10 +407,16 @@ func privateDecryptOAEP(privKeyObj *Pkcs11KeyFileObject, ciphertext []byte, hash
 		return nil, err
 	}
 
-	oaep := OAEPSha256Params
+	var oaep *pkcs11.OAEPParams
+
+	// the default is sha1
 	switch hashalg {
-	case "sha1":
+	case "sha1", "":
 		oaep = OAEPSha1Params
+	case "sha256":
+		oaep = OAEPSha256Params
+	default:
+		return nil, errors.Errorf("Unsupported hash algorithm '%s' for decryption", hashalg)
 	}
 
 	err = p11ctx.DecryptInit(session, []*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_RSA_PKCS_OAEP, oaep)}, p11PrivKey)
