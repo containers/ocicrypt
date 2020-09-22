@@ -178,11 +178,9 @@ func pkcs11UriGetLoginParameters(p11uri *pkcs11uri.Pkcs11URI, privateKeyOperatio
 		if !p11uri.HasPIN() {
 			return "", "", 0, errors.New("Missing PIN for private key operation")
 		}
-		pin, err = p11uri.GetPIN()
-		if err != nil {
-			return "", "", 0, errors.Wrap(err, "Could not get PIN needed for private key operation")
-		}
 	}
+	 // some devices require a PIN to find a *public* key object, others don't
+	pin, _ = p11uri.GetPIN()
 
 	module, err := p11uri.GetModule()
 	if err != nil {
