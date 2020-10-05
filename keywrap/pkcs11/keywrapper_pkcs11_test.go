@@ -17,11 +17,13 @@
 package pkcs11
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/containers/ocicrypt/config"
 	"github.com/containers/ocicrypt/utils"
+	"github.com/containers/ocicrypt/crypto/pkcs11"
 	"github.com/containers/ocicrypt/utils/softhsm"
 )
 
@@ -32,10 +34,11 @@ var (
 func getPkcs11ConfigYaml(t *testing.T) []byte {
 	// we need to provide a configuration file so that on the various distros
 	// the libsofthsm2.so will be found by searching directories
-	config := `module-directories:
- - /usr/lib64/pkcs11/  # Fedora
- - /usr/lib/softhsm/   # Ubuntu
-`
+	mdyamls := pkcs11.GetDefaultModuleDirectoriesYaml("")
+	config := fmt.Sprintf("module-directories:\n"+
+		"%s"+
+		"allowed-module-paths:\n"+
+		"%s", mdyamls, mdyamls)
 	return []byte(config)
 }
 

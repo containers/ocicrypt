@@ -129,6 +129,29 @@ type Pkcs11Config struct {
 	AllowedModulePaths []string `yaml:"allowed-module-paths"`
 }
 
+// GetDefaultModuleDirectories returns module directories covering
+// a variety of Linux distros
+func GetDefaultModuleDirectories() []string {
+	libdir1 := "/usr/lib/%s-linux-gnu"
+	return []string{
+		"/usr/lib64/pkcs11/", // Fedora,RHEL,openSUSE
+		"/usr/lib/pkcs11/",   // Fedora,ArchLinux
+		"/usr/local/lib/pkcs11",
+		"/usr/lib/softhsm/", // Debian,Ubuntu
+		libdir1,
+	}
+}
+
+// GetDefaultModuleDirectoresFormatted returns the default module directories formatted for YAML
+func GetDefaultModuleDirectoriesYaml(indent string) string {
+	res := ""
+
+	for _, dir := range GetDefaultModuleDirectories() {
+		res += indent + "- " + dir + "\n"
+	}
+	return res
+}
+
 // ParsePkcs11ConfigFile parses a pkcs11 config file hat influences the module search behavior
 // as well as the set of modules that users are allowed to use
 func ParsePkcs11ConfigFile(yamlstr []byte) (*Pkcs11Config, error) {
