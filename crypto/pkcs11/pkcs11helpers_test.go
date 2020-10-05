@@ -19,6 +19,7 @@ package pkcs11
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -33,10 +34,12 @@ var (
 func getPkcs11Config(t *testing.T) *Pkcs11Config {
 	// we need to provide a configuration file so that on the various distros
 	// the libsofthsm2.so will be found by searching directories
-	config := `module-directories:
- - /usr/lib64/pkcs11/  # Fedora
- - /usr/lib/softhsm/   # Ubuntu
-`
+	mdyaml := GetDefaultModuleDirectoriesYaml("")
+	config := fmt.Sprintf("module-directories:\n"+
+		"%s"+
+		"allowed-module-paths:\n"+
+		"%s", mdyaml, mdyaml)
+
 	p11conf, err := ParsePkcs11ConfigFile([]byte(config))
 	if err != nil {
 		t.Fatal(err)
@@ -59,6 +62,7 @@ func TestParsePkcs11KeyFileGood(t *testing.T) {
 
 	p11conf := getPkcs11Config(t)
 	p11keyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11keyfileobj.Uri.SetAllowedModulePaths(p11conf.ModuleDirectories)
 
 	module, err := p11keyfileobj.Uri.GetModule()
 	if err != nil {
@@ -124,6 +128,7 @@ module:
 
 	p11conf := getPkcs11Config(t)
 	p11pubkeyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11pubkeyfileobj.Uri.SetAllowedModulePaths(p11conf.ModuleDirectories)
 
 	pubKeys := make([]interface{}, 1)
 	pubKeys[0] = p11pubkeyfileobj
@@ -137,6 +142,7 @@ module:
 		t.Fatal(err)
 	}
 	p11privkeyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11privkeyfileobj.Uri.SetAllowedModulePaths(p11conf.ModuleDirectories)
 
 	privKeys := make([]*Pkcs11KeyFileObject, 1)
 	privKeys[0] = p11privkeyfileobj
@@ -198,6 +204,7 @@ module:
 
 	p11conf := getPkcs11Config(t)
 	p11keyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
+	p11keyfileobj.Uri.SetAllowedModulePaths(p11conf.ModuleDirectories)
 
 	// for SoftHSM we can just reuse the public key URI
 	privKeys := make([]*Pkcs11KeyFileObject, 1)
