@@ -18,6 +18,7 @@ package pkcs11
 
 import (
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 )
@@ -80,4 +81,28 @@ func restoreEnv(envs []string) {
 	}
 
 	envLock.Unlock()
+}
+
+func getHostAndOsType() (string, string, string) {
+	ht := ""
+	ot := ""
+	st := ""
+	switch runtime.GOOS {
+	case "linux":
+		ot = "linux"
+		st = "gnu"
+		switch runtime.GOARCH {
+		case "arm":
+			ht = "arm"
+		case "arm64":
+			ht = "aarch64"
+		case "amd64":
+			ht = "x86_64"
+		case "ppc64le":
+			ht = "powerpc64le"
+		case "s390x":
+			ht = "s390x"
+		}
+	}
+	return ht, ot, st
 }
