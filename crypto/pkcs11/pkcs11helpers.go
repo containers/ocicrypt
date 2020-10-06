@@ -132,14 +132,20 @@ type Pkcs11Config struct {
 // GetDefaultModuleDirectories returns module directories covering
 // a variety of Linux distros
 func GetDefaultModuleDirectories() []string {
-	libdir1 := "/usr/lib/%s-linux-gnu"
-	return []string{
+	dirs := []string{
 		"/usr/lib64/pkcs11/", // Fedora,RHEL,openSUSE
 		"/usr/lib/pkcs11/",   // Fedora,ArchLinux
-		"/usr/local/lib/pkcs11",
+		"/usr/local/lib/pkcs11/",
 		"/usr/lib/softhsm/", // Debian,Ubuntu
-		libdir1,
 	}
+
+	// Debian directory: /usr/lib/(x86_64|aarch64|arm|powerpc64le|s390x)-linux-gnu/
+	hosttype, ostype, q := getHostAndOsType()
+	if len(hosttype) > 0 {
+		dir := fmt.Sprintf("/usr/lib/%s-%s-%s/", hosttype, ostype, q)
+		dirs = append(dirs, dir)
+	}
+	return dirs
 }
 
 // GetDefaultModuleDirectoresFormatted returns the default module directories formatted for YAML
