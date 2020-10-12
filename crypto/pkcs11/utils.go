@@ -21,6 +21,8 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 var (
@@ -28,22 +30,26 @@ var (
 )
 
 // setEnvVars sets the environment variables given in the map and locks the environment from
-// modification with the same function; therefore, you *must* call restoreEnv with the return
+// modification with the same function; if successful, you *must* call restoreEnv with the return
 // value from this function
-func setEnvVars(env map[string]string) []string {
+func setEnvVars(env map[string]string) ([]string, error) {
 	envLock.Lock()
 
 	if len(env) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	oldenv := os.Environ()
 
 	for k, v := range env {
-		os.Setenv(k, v)
+		err := os.Setenv(k, v)
+		if err != nil {
+			restoreEnv(oldenv)
+			return nil, errors.Wrapf(err, "Could not set environment variable '%s' to '%s'", k, v)
+		}
 	}
 
-	return oldenv
+	return oldenv, nil
 }
 
 func arrayToMap(elements []string) map[string]string {
