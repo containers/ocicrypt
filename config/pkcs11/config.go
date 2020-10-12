@@ -23,7 +23,6 @@ import (
 	"path"
 
 	"github.com/containers/ocicrypt/crypto/pkcs11"
-	enchelpers "github.com/containers/ocicrypt/helpers"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -103,17 +102,15 @@ func getDefaultCryptoConfigOpts() (*OcicryptConfig, error) {
 	}, err
 }
 
-// GetCryptoConfigOpts gets the CryptoConfigOpts either from a configuration file or if none is
+// GetUserPkcs11Config gets the user's Pkcs11Conig either from a configuration file or if none is
 // found the default ones are returned
-func GetCryptoConfigOpts() (enchelpers.CryptoConfigOpts, error) {
+func GetUserPkcs11Config() (*pkcs11.Pkcs11Config, error) {
 	ic, err := getConfiguration()
 	if err != nil {
-		return enchelpers.CryptoConfigOpts{}, err
+		return &pkcs11.Pkcs11Config{}, err
 	}
 	if ic == nil {
-		return enchelpers.CryptoConfigOpts{}, errors.New("No ocicrypt config file was found")
+		return &pkcs11.Pkcs11Config{}, errors.New("No ocicrypt config file was found")
 	}
-	return enchelpers.CryptoConfigOpts{
-		Pkcs11Config: &ic.Pkcs11Config,
-	}, nil
+	return &ic.Pkcs11Config, nil
 }
