@@ -9,7 +9,7 @@ import (
 
 	"github.com/containers/ocicrypt"
 	encconfig "github.com/containers/ocicrypt/config"
-	"github.com/containers/ocicrypt/config/pkcs11"
+	"github.com/containers/ocicrypt/config/pkcs11config"
 	"github.com/containers/ocicrypt/crypto/pkcs11"
 	encutils "github.com/containers/ocicrypt/utils"
 
