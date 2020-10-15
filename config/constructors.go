@@ -19,8 +19,8 @@ package config
 import (
 	"github.com/containers/ocicrypt/crypto/pkcs11"
 
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 )
 
 // EncryptWithJwe returns a CryptoConfig to encrypt with jwe public keys

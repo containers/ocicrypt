@@ -23,13 +23,13 @@ import (
 	"path"
 
 	"github.com/containers/ocicrypt/crypto/pkcs11"
+	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 )
 
 // OcicryptConfig represents the format of an imgcrypt.conf config file
 type OcicryptConfig struct {
-	Pkcs11Config pkcs11.Pkcs11Config `yaml:"pkcs11"`
+	Pkcs11Config pkcs11.Pkcs11Config `json:"pkcs11"`
 }
 
 const CONFIGFILE = "ocicrypt.conf"

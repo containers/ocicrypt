@@ -29,10 +29,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ghodss/yaml"
 	"github.com/miekg/pkcs11"
 	"github.com/pkg/errors"
 	pkcs11uri "github.com/stefanberger/go-pkcs11uri"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -62,11 +62,11 @@ var (
 // Pkcs11URI object and activated when the pkcs11 module is used.
 type Pkcs11KeyFile struct {
 	Pkcs11 struct {
-		Uri string `yaml:"uri"`
-	} `yaml:"pkcs11"`
+		Uri string `json:"uri"`
+	} `json:"pkcs11"`
 	Module struct {
-		Env map[string]string `yaml:"env,omitempty"`
-	} `yaml:"module"`
+		Env map[string]string `json:"env,omitempty"`
+	} `json:"module"`
 }
 
 // Pkcs11KeyFileObject is a representation of the Pkcs11KeyFile with the pkcs11 URI as an object
@@ -125,8 +125,8 @@ func IsPkcs11PublicKey(yamlstr []byte) bool {
 // allowd-module-paths
 // - /usr/lib64/pkcs11/libsofthsm2.so
 type Pkcs11Config struct {
-	ModuleDirectories  []string `yaml:"module-directories"`
-	AllowedModulePaths []string `yaml:"allowed-module-paths"`
+	ModuleDirectories  []string `json:"module-directories"`
+	AllowedModulePaths []string `json:"allowed-module-paths"`
 }
 
 // GetDefaultModuleDirectories returns module directories covering
