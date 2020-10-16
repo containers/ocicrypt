@@ -37,3 +37,8 @@ We note that adding interfaces here is risky outside the OCI spec is not recomme
 ## Security Issues
 
 We consider security issues related to this library critical. Please report and security related issues by emailing maintainers in the [MAINTAINERS](MAINTAINERS) file.
+
+
+## Ocicrypt Pkcs11 Support
+
+Ocicrypt Pkcs11 support is currently experiemental. For more details, please refer to the [this document](docs/pkcs11.md).
