@@ -205,25 +205,30 @@ With containerd imgcrypt, the tool to encrypt/decrypt images is `ctr-enc`.
 
 ### Encryping with Public Key
 
+```
 $ OCICRYPT_CONFIG=internal ./bin/ctr-enc images encrypt --recipient pkcs11:myPkcs11Key.yaml docker.io/library/alpine:latest alpine.enc.pkcs11key:latest
 Encrypting docker.io/library/alpine:latest to alpine.enc.pkcs11key:latest
-WARNING: Pkcs11 support is currently experimental and images encrypted with it will not be decryptable once it is production ready.
+Note: Pkcs11 support is currently experimental
+```
 
 ### Encryping with PKCS11 Key Configuration
 
+```
 $ OCICRYPT_CONFIG=internal ./bin/ctr-enc images encrypt --recipient pkcs11:pubkey.pem docker.io/library/alpine:latest alpine.enc.pkcs11pubkey:latest
 Encrypting docker.io/library/alpine:latest to alpine.enc.pkcs11pubkey:latest
-WARNING: Pkcs11 support is currently experimental and images encrypted with it will not be decryptable once it is production ready.
+Note: Pkcs11 support is currently experimental
+```
 
 
 ### Decrypting with both images encrypted above with PKCS11 Key Configuration 
 
+```
 $ OCICRYPT_CONFIG=internal ./bin/ctr-enc images decrypt --key myPkcs11Key.yaml alpine.enc.pkcs11key:latest alpine.dec.pkcs11key:latest
 Decrypting alpine.enc.pkcs11key:latest to alpine.dec.pkcs11key:latest
 
 $ OCICRYPT_CONFIG=internal ./bin/ctr-enc images decrypt --key myPkcs11Key.yaml alpine.enc.pkcs11pubkey:latest alpine.dec.pkcs11pubkey:latest
 Decrypting alpine.enc.pkcs11pubkey:latest to alpine.dec.pkcs11pubkey:latest
-
+```
 
 ## skopeo
 
