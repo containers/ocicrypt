@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-.PHONY: check build decoder
+.PHONY: check build decoder generate-protobuf
 
 all: build
 
@@ -29,3 +29,6 @@ vendor:
 
 test:
 	go test ./... -test.v
+
+generate-protobuf:
+	protoc  -I utils/keyprovider/ utils/keyprovider/keyprovider.proto --go_out=plugins=grpc:utils/keyprovider
