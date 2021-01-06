@@ -337,7 +337,7 @@ func CreateCryptoConfig(recipients []string, keys []string) (encconfig.CryptoCon
 			encryptCcs = append(encryptCcs, jweCc)
 		}
 		var p11conf *pkcs11.Pkcs11Config
-		if len(pkcs11Yamls) > 0 {
+		if len(pkcs11Yamls) > 0 || len(pkcs11Pubkeys) > 0 {
 			p11conf, err = pkcs11config.GetUserPkcs11Config()
 			if err != nil {
 				return encconfig.CryptoConfig{}, err
