@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -230,7 +231,7 @@ func findObject(p11ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, ke
 		if len(msg) > 0 {
 			msg += " and "
 		}
-		msg += fmt.Sprintf("id '%s'", keyid)
+		msg += url.PathEscape(keyid)
 	}
 
 	if err := p11ctx.FindObjectsInit(session, template); err != nil {
