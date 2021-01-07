@@ -34,7 +34,7 @@ The config file consists for list of protocols that can be used for either encry
         "key-providers": {
             "simplecrypt": {
                 "cmd": {
-                    "name":"/home/vagrant/simplecrypt",
+                    "path":"/home/vagrant/simplecrypt",
                     "args": []
                 }
             }
