@@ -178,7 +178,7 @@ Because communication with HSM modules are usually done with a external module, 
 This configuration is done via an environment variable `OCICRPYT_CONFIG`. Here is the behavior of this configuration:
 - If the environment variable is not set, it indicates that no HSM modules should be allowed
 - If the environment variable is set to "internal", it uses policy that allows to access most pkcs11 modules. It holds default module search paths that should cover many distros ([details here](https://github.com/containers/ocicrypt/blob/2ddd51f10d6d15ce99e020ec35729ea741d32f2a/crypto/pkcs11/pkcs11helpers.go#L134))
-- Else, it is treated as a filepath, where it contains the configuration of where modules are, and which are allowed. More details on how to configure this can be seen [here](https://github.com/containers/ocicrypt/blob/master/config/pkcs11/config.go).
+- Else, it is treated as a filepath, where it contains the configuration of where modules are, and which are allowed. More details on how to configure this can be seen [here](https://github.com/containers/ocicrypt/blob/master/config/pkcs11config/config.go#L38).
 
 
 
@@ -190,10 +190,12 @@ We will show how this can be used with users of ocicrypt. After performing the s
 - Encrypting an image with ocicrypt pkcs11 protocol using a pkcs11 key configuration (requires HSM access)
 - Decrypting an image with ocicrypt pkcs11 protocol using a pkcs11 key configuration (requires HSM access)
 
-We will go through 3 consumers of the ocicrypt library. NOTE: only builds that use ocicrypt v1.0.4 and above will have pkcs11 experimental support.
+We will go through 3 consumers of the ocicrypt library.
 - [containerd/imgcrypt](http://github.com/containerd/imgcrypt)
 - [skopeo](https://github.com/containers/skopeo)
 - [buildah](https://github.com/containers/buildah)
+
+NOTE: only builds that use ocicrypt v1.1.0 and above will have pkcs11 experimental support.
 
 
 We remember that we created two files above, pubkey.pem and `myPkcs11Key.yaml`. For the following command executions, we assume that the plaintext image has already been downloaded. We are using the image `docker.io/library/alpine:latest`.
