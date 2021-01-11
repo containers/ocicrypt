@@ -25,7 +25,7 @@ The config file consists for list of protocols that can be used for either encry
 
 ## Encrpyting/Decrypting examples
 
-1. Build a sample golang application/binary -> https://gist.github.com/lumjjb/5ade3e3cb7d8613c0989bfb41569fe59
+1. Build a sample golang application/binary -> https://github.com/lumjjb/simple-ocicrypt-keyprovider
 
 2. Configure the ${HOME}/ocirypt.conf like below
 ```code
