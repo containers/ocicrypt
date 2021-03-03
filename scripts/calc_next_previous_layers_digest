@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+
+echo "Enter PreviousLayersDigest or leave empty for initial one"
+read previousLayersDigest
+if [ -z "$previousLayersDigest" ]; then
+	previousLayersDigest=$(echo -en | sha256sum | gawk '{print $1}')
+fi
+if ! [[ $previousLayersDigest =~ ^[0-9a-fA-F]{64}$ ]]; then
+	echo "previousLayersDigest '$previousLayersDigest' must be a sha256"
+	exit 1
+fi
+while :; do
+	echo "Enter current layer's digest"
+	read currentLayerDigest
+	if ! [[ $currentLayerDigest =~ ^[0-9a-fA-F]{64}$ ]]; then
+		echo "current layer digest must be a sha256"
+		exit 1
+	fi
+
+	dig=$(echo -n "${previousLayersDigest}${currentLayerDigest}" |
+	      sed -n 's/[0-9a-fA-F]\{2\}/\\x\0/pg' )
+
+	previousLayersDigest=$(echo -en "${dig}" | sha256sum | gawk '{print $1}')
+	echo "digest: ${previousLayersDigest}"
+done

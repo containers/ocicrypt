@@ -17,25 +17,28 @@
 package ocicrypt
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	keyproviderconfig "github.com/containers/ocicrypt/config/keyprovider-config"
-	"github.com/containers/ocicrypt/keywrap/keyprovider"
 	"io"
 	"strings"
 
 	"github.com/containers/ocicrypt/blockcipher"
 	"github.com/containers/ocicrypt/config"
+	keyproviderconfig "github.com/containers/ocicrypt/config/keyprovider-config"
 	"github.com/containers/ocicrypt/keywrap"
 	"github.com/containers/ocicrypt/keywrap/jwe"
+	"github.com/containers/ocicrypt/keywrap/keyprovider"
 	"github.com/containers/ocicrypt/keywrap/pgp"
 	"github.com/containers/ocicrypt/keywrap/pkcs11"
 	"github.com/containers/ocicrypt/keywrap/pkcs7"
+	"github.com/containers/ocicrypt/utils"
 	"github.com/opencontainers/go-digest"
-	log "github.com/sirupsen/logrus"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // EncryptLayerFinalizer is a finalizer run to return the annotations to set for
@@ -86,8 +89,20 @@ func GetWrappedKeysMap(desc ocispec.Descriptor) map[string]string {
 	return wrappedKeysMap
 }
 
+// comparePreviousLayersDigests compares the given digests and returns an error if they do not match
+func comparePreviousLayersDigests(previousLayersDigest []byte, expPreviousLayersDigest digest.Digest) error {
+	digest, err := hex.DecodeString(expPreviousLayersDigest.Encoded())
+	if err != nil {
+		return errors.Wrapf(err, "Hex-decoding expected previous layers hash failed")
+	}
+	if !bytes.Equal(digest, previousLayersDigest) {
+		return errors.Errorf("Previous layer digest '%x' does not match expected one '%x'", previousLayersDigest, digest)
+	}
+	return nil
+}
+
 // EncryptLayer encrypts the layer by running one encryptor after the other
-func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, desc ocispec.Descriptor) (io.Reader, EncryptLayerFinalizer, error) {
+func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, desc ocispec.Descriptor, previousLayersDigest []byte) (io.Reader, EncryptLayerFinalizer, []byte, error) {
 	var (
 		encLayerReader io.Reader
 		err            error
@@ -97,8 +112,18 @@ func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, des
 		pubOptsData    []byte
 	)
 
+	if len(previousLayersDigest) == 0 {
+		/* bottom-most layer MUST start with sha256.Sum(nil) */
+		return nil, nil, nil, errors.New("previousLayersDigest must not be nil")
+	}
+
 	if ec == nil {
-		return nil, nil, errors.New("EncryptConfig must not be nil")
+		return nil, nil, nil, errors.New("EncryptConfig must not be nil")
+	}
+
+	newLayersDigest, err := utils.GetNewLayersDigest(previousLayersDigest, desc.Digest)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	for annotationsID := range keyWrapperAnnotations {
@@ -106,11 +131,11 @@ func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, des
 		if annotation != "" {
 			privOptsData, err = decryptLayerKeyOptsData(&ec.DecryptConfig, desc)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			pubOptsData, err = getLayerPubOpts(desc)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			// already encrypted!
 			encrypted = true
@@ -120,7 +145,7 @@ func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, des
 	if !encrypted {
 		encLayerReader, bcFin, err = commonEncryptLayer(encOrPlainLayerReader, desc.Digest, blockcipher.AES256CTR)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -131,6 +156,8 @@ func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, des
 			if err != nil {
 				return nil, err
 			}
+
+			opts.Private.PreviousLayersDigest = digest.NewDigestFromBytes(digest.SHA256, previousLayersDigest)
 			privOptsData, err = json.Marshal(opts.Private)
 			if err != nil {
 				return nil, errors.Wrapf(err, "could not JSON marshal opts")
@@ -169,8 +196,7 @@ func EncryptLayer(ec *config.EncryptConfig, encOrPlainLayerReader io.Reader, des
 	}
 
 	// if nothing was encrypted, we just return encLayer = nil
-	return encLayerReader, encLayerFinalizer, err
-
+	return encLayerReader, encLayerFinalizer, newLayersDigest, err
 }
 
 // preWrapKeys calls WrapKeys and handles the base64 encoding and concatenation of the
@@ -190,22 +216,22 @@ func preWrapKeys(keywrapper keywrap.KeyWrapper, ec *config.EncryptConfig, b64Ann
 // DecryptLayer decrypts a layer trying one keywrap.KeyWrapper after the other to see whether it
 // can apply the provided private key
 // If unwrapOnly is set we will only try to decrypt the layer encryption key and return
-func DecryptLayer(dc *config.DecryptConfig, encLayerReader io.Reader, desc ocispec.Descriptor, unwrapOnly bool) (io.Reader, digest.Digest, error) {
+func DecryptLayer(dc *config.DecryptConfig, encLayerReader io.Reader, desc ocispec.Descriptor, unwrapOnly bool, previousLayersDigest []byte) (io.Reader, digest.Digest, []byte, error) {
 	if dc == nil {
-		return nil, "", errors.New("DecryptConfig must not be nil")
+		return nil, "", nil, errors.New("DecryptConfig must not be nil")
 	}
 	privOptsData, err := decryptLayerKeyOptsData(dc, desc)
 	if err != nil || unwrapOnly {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	var pubOptsData []byte
 	pubOptsData, err = getLayerPubOpts(desc)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
-	return commonDecryptLayer(encLayerReader, privOptsData, pubOptsData)
+	return commonDecryptLayer(encLayerReader, privOptsData, pubOptsData, previousLayersDigest)
 }
 
 func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) ([]byte, error) {
@@ -301,23 +327,37 @@ func commonEncryptLayer(plainLayerReader io.Reader, d digest.Digest, typ blockci
 
 // commonDecryptLayer decrypts an encrypted layer previously encrypted with commonEncryptLayer
 // by passing along the optsData
-func commonDecryptLayer(encLayerReader io.Reader, privOptsData []byte, pubOptsData []byte) (io.Reader, digest.Digest, error) {
+func commonDecryptLayer(encLayerReader io.Reader, privOptsData []byte, pubOptsData []byte, previousLayersDigest []byte) (io.Reader, digest.Digest, []byte, error) {
 	privOpts := blockcipher.PrivateLayerBlockCipherOptions{}
 	err := json.Unmarshal(privOptsData, &privOpts)
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "could not JSON unmarshal privOptsData")
+		return nil, "", nil, errors.Wrapf(err, "could not JSON unmarshal privOptsData")
+	}
+
+	if len(privOpts.PreviousLayersDigest) > 0 {
+		/* older images do not have this */
+		err = comparePreviousLayersDigests(previousLayersDigest, privOpts.PreviousLayersDigest)
+		if err != nil {
+			return nil, "", nil, err
+		}
+	}
+
+	/* calculate the next PreviousLayerDigest on the *decrypted* layer's digest */
+	newLayersDigest, err := utils.GetNewLayersDigest(previousLayersDigest, privOpts.Digest)
+	if err != nil {
+		return nil, "", nil, err
 	}
 
 	lbch, err := blockcipher.NewLayerBlockCipherHandler()
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	pubOpts := blockcipher.PublicLayerBlockCipherOptions{}
 	if len(pubOptsData) > 0 {
 		err := json.Unmarshal(pubOptsData, &pubOpts)
 		if err != nil {
-			return nil, "", errors.Wrapf(err, "could not JSON unmarshal pubOptsData")
+			return nil, "", nil, errors.Wrapf(err, "could not JSON unmarshal pubOptsData")
 		}
 	}
 
@@ -328,10 +368,10 @@ func commonDecryptLayer(encLayerReader io.Reader, privOptsData []byte, pubOptsDa
 
 	plainLayerReader, opts, err := lbch.Decrypt(encLayerReader, opts)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
-	return plainLayerReader, opts.Private.Digest, nil
+	return plainLayerReader, opts.Private.Digest, newLayersDigest, nil
 }
 
 // FilterOutAnnotations filters out the annotations belonging to the image encryption 'namespace'

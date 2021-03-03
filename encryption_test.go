@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/containers/ocicrypt/config"
+	"github.com/containers/ocicrypt/utils"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -100,10 +101,19 @@ func TestEncryptLayer(t *testing.T) {
 	}
 
 	dataReader := bytes.NewReader(data)
+	previousLayersDigest := utils.GetInitialPreviousLayersDigest()
 
-	encLayerReader, encLayerFinalizer, err := EncryptLayer(ec, dataReader, desc)
+	encLayerReader, encLayerFinalizer, newLayersDigest, err := EncryptLayer(ec, dataReader, desc, previousLayersDigest)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	expDigest, err := utils.GetNewLayersDigest(previousLayersDigest, desc.Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(expDigest, newLayersDigest) {
+		t.Fatal("Previous layer digest is wrong")
 	}
 
 	encLayer := make([]byte, 1024)
@@ -126,7 +136,7 @@ func TestEncryptLayer(t *testing.T) {
 		Annotations: annotations,
 	}
 
-	decLayerReader, _, err := DecryptLayer(dc, encLayerReaderAt, newDesc, false)
+	decLayerReader, _, _, err := DecryptLayer(dc, encLayerReaderAt, newDesc, false, previousLayersDigest)
 	if err != nil {
 		t.Fatal(err)
 	}

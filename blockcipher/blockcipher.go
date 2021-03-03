@@ -45,6 +45,9 @@ type PrivateLayerBlockCipherOptions struct {
 	// CipherOptions contains the cipher metadata used for encryption/decryption
 	// This field should be populated by Encrypt/Decrypt calls
 	CipherOptions map[string][]byte `json:"cipheroptions"`
+
+	// PreviousLayersDigest is the accumulated digest of all previous layers
+	PreviousLayersDigest digest.Digest `json:"previouslayersdigest"`
 }
 
 // PublicLayerBlockCipherOptions includes the information required to encrypt/decrypt
