@@ -89,7 +89,11 @@ func processRecipientKeys(recipients []string) ([][]byte, [][]byte, [][]byte, []
 func processx509Certs(keys []string) ([][]byte, error) {
 	var x509s [][]byte
 	for _, key := range keys {
-		tmp, err := ioutil.ReadFile(strings.Split(key, ":")[0])
+		fileName := strings.Split(key, ":")[0]
+		if _, err := os.Stat(fileName); os.IsNotExist(err) {
+			continue
+		}
+		tmp, err := ioutil.ReadFile(fileName)
 		if err != nil {
 			return nil, errors.Wrap(err, "Unable to read file")
 		}
