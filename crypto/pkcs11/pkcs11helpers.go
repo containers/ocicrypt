@@ -431,12 +431,12 @@ func EncryptMultiple(pubKeys []interface{}, data []byte) ([]byte, error) {
 //     {
 //        "version": 0,
 //        "blob": <base64 encoded RSA OAEP encrypted blob>,
-//        "hash": <hash used for OAEP other than 'sha256'>
+//        "hash": <hash used for OAEP other than 'sha1'>
 //     } ,
 //     {
 //        "version": 0,
 //        "blob": <base64 encoded RSA OAEP encrypted blob>,
-//        "hash": <hash used for OAEP other than 'sha256'>
+//        "hash": <hash used for OAEP other than 'sha1'>
 //     } ,
 //     [...]
 // }
