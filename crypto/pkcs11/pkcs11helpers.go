@@ -67,12 +67,12 @@ func rsaPublicEncryptOAEP(pubKey *rsa.PublicKey, plaintext []byte) ([]byte, stri
 	)
 
 	oaephash := os.Getenv("OCICRYPT_OAEP_HASHALG")
-	// The default is 'sha1'
+	// The default is sha256 (previously was sha1)
 	switch strings.ToLower(oaephash) {
-	case "sha1", "":
+	case "sha1":
 		hashfunc = sha1.New()
 		hashalg = "sha1"
-	case "sha256":
+	case "sha256", "":
 		hashfunc = sha256.New()
 		hashalg = "sha256"
 	default:
@@ -281,12 +281,12 @@ func publicEncryptOAEP(pubKey *Pkcs11KeyFileObject, plaintext []byte) ([]byte, s
 
 	var oaep *pkcs11.OAEPParams
 	oaephash := os.Getenv("OCICRYPT_OAEP_HASHALG")
-	// The default is 'sha1'
+	// The default is sha256 (previously was sha1)
 	switch strings.ToLower(oaephash) {
-	case "sha1", "":
+	case "sha1":
 		oaep = OAEPSha1Params
 		hashalg = "sha1"
-	case "sha256":
+	case "sha256", "":
 		oaep = OAEPSha256Params
 		hashalg = "sha256"
 	default:
