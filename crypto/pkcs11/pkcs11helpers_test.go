@@ -16,7 +16,6 @@
    limitations under the License.
 */
 
-
 package pkcs11
 
 import (
@@ -133,6 +132,10 @@ module:
 	p11pubkeyfileobj.Uri.SetModuleDirectories(p11conf.ModuleDirectories)
 	p11pubkeyfileobj.Uri.SetAllowedModulePaths(p11conf.ModuleDirectories)
 
+	// SoftHSM 2.6.1 only supports OAEP with sha1
+	// https://github.com/opendnssec/SoftHSMv2/blob/7f99bedae002f0dd04ceeb8d86d59fc4a68a69a0/src/lib/SoftHSM.cpp#L3123-L3127
+	os.Setenv("OCICRYPT_OAEP_HASHALG", "sha1")
+
 	pubKeys := make([]interface{}, 1)
 	pubKeys[0] = p11pubkeyfileobj
 	p11json, err := EncryptMultiple(pubKeys, []byte(testinput))
@@ -185,6 +188,8 @@ func TestPkcs11EncryptDecryptPubkey(t *testing.T) {
 
 	testinput := "Hello World!"
 
+	// SoftHSM 2.6.1 only supports OAEP with sha1
+	// https://github.com/opendnssec/SoftHSMv2/blob/7f99bedae002f0dd04ceeb8d86d59fc4a68a69a0/src/lib/SoftHSM.cpp#L3123-L3127
 	os.Setenv("OCICRYPT_OAEP_HASHALG", "sha1")
 
 	pubKeys := make([]interface{}, 1)
