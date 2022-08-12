@@ -33,9 +33,9 @@ import (
 	"github.com/containers/ocicrypt/keywrap/pkcs11"
 	"github.com/containers/ocicrypt/keywrap/pkcs7"
 	"github.com/opencontainers/go-digest"
-	log "github.com/sirupsen/logrus"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // EncryptLayerFinalizer is a finalizer run to return the annotations to set for
