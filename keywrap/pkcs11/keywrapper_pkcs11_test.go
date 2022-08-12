@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/containers/ocicrypt/config"
-	"github.com/containers/ocicrypt/utils"
 	"github.com/containers/ocicrypt/crypto/pkcs11"
+	"github.com/containers/ocicrypt/utils"
 	"github.com/containers/ocicrypt/utils/softhsm"
 )
 

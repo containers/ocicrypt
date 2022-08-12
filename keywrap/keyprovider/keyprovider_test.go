@@ -68,14 +68,14 @@ func init() {
 func (*server) WrapKey(ctx context.Context, request *keyproviderpb.KeyProviderKeyWrapProtocolInput) (*keyproviderpb.KeyProviderKeyWrapProtocolOutput, error) {
 	var keyP KeyProviderKeyWrapProtocolInput
 	err := json.Unmarshal(request.KeyProviderKeyWrapProtocolInput, &keyP)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	c, _ := aes.NewCipher(encryptingKey)
 	gcm, _ := cipher.NewGCM(c)
 	nonce := make([]byte, gcm.NonceSize())
 	_, err = io.ReadFull(rand.Reader, nonce)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 
@@ -100,12 +100,12 @@ func (*server) WrapKey(ctx context.Context, request *keyproviderpb.KeyProviderKe
 func (*server) UnWrapKey(ctx context.Context, request *keyproviderpb.KeyProviderKeyWrapProtocolInput) (*keyproviderpb.KeyProviderKeyWrapProtocolOutput, error) {
 	var keyP KeyProviderKeyWrapProtocolInput
 	err := json.Unmarshal(request.KeyProviderKeyWrapProtocolInput, &keyP)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	apkt := annotationPacket{}
 	err = json.Unmarshal(keyP.KeyUnwrapParams.Annotation, &apkt)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	ciphertext := apkt.WrappedKey
@@ -133,7 +133,7 @@ func (r TestRunner) Exec(cmdName string, args []string, input []byte) ([]byte, e
 	if cmdName == "/usr/lib/keyprovider-1-wrapkey" {
 		var keyP KeyProviderKeyWrapProtocolInput
 		err := json.Unmarshal(input, &keyP)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
 		c, _ := aes.NewCipher(encryptingKey)
@@ -141,7 +141,7 @@ func (r TestRunner) Exec(cmdName string, args []string, input []byte) ([]byte, e
 
 		nonce := make([]byte, gcm.NonceSize())
 		_, err = io.ReadFull(rand.Reader, nonce)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
 		wrappedKey := gcm.Seal(nonce, nonce, keyP.KeyWrapParams.OptsData, nil)
@@ -160,12 +160,12 @@ func (r TestRunner) Exec(cmdName string, args []string, input []byte) ([]byte, e
 	} else if cmdName == "/usr/lib/keyprovider-1-unwrapkey" {
 		var keyP KeyProviderKeyWrapProtocolInput
 		err := json.Unmarshal(input, &keyP)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
 		apkt := annotationPacket{}
 		err = json.Unmarshal(keyP.KeyUnwrapParams.Annotation, &apkt)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
 		ciphertext := apkt.WrappedKey
@@ -364,7 +364,6 @@ func TestKeyWrapKeyProviderGRPCSuccess(t *testing.T) {
 	keyWrapOutput, err := keyWrapper.WrapKeys(&ec, optsData)
 	assert.NoError(t, err)
 
-
 	dp := make(map[string][][]byte)
 	dp["keyprovider-1"] = append(dp["keyprovider-1"], []byte("Supported Protocol"))
 
@@ -376,5 +375,3 @@ func TestKeyWrapKeyProviderGRPCSuccess(t *testing.T) {
 	assert.Equal(t, optsData, keyUnWrapOutput)
 	os.Remove(path)
 }
-
-
