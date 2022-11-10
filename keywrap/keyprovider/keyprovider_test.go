@@ -24,15 +24,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"os"
+	"testing"
+
 	"github.com/containers/ocicrypt/config"
 	keyprovider_config "github.com/containers/ocicrypt/config/keyprovider-config"
 	keyproviderpb "github.com/containers/ocicrypt/utils/keyprovider"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
-	"io"
-	"net"
-	"os"
-	"testing"
 )
 
 // TestRunner mocks binary executable for key wrapping and unwrapping
