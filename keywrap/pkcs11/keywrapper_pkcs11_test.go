@@ -133,7 +133,7 @@ module:
 		{
 			EncryptConfig: &config.EncryptConfig{
 				Parameters: map[string][][]byte{
-					"pkcs11-pubkeys": {[]byte(pubKey2Pem)},
+					"pkcs11-pubkeys": {pubKey2Pem},
 				},
 				DecryptConfig: config.DecryptConfig{
 					Parameters: map[string][][]byte{

@@ -55,7 +55,7 @@ func ParsePkcs11Uri(uri string) (*pkcs11uri.Pkcs11URI, error) {
 func ParsePkcs11KeyFile(yamlstr []byte) (*Pkcs11KeyFileObject, error) {
 	p11keyfile := Pkcs11KeyFile{}
 
-	err := yaml.Unmarshal([]byte(yamlstr), &p11keyfile)
+	err := yaml.Unmarshal(yamlstr, &p11keyfile)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Could not unmarshal pkcs11 keyfile")
 	}
@@ -126,7 +126,7 @@ func GetDefaultModuleDirectoriesYaml(indent string) string {
 func ParsePkcs11ConfigFile(yamlstr []byte) (*Pkcs11Config, error) {
 	p11conf := Pkcs11Config{}
 
-	err := yaml.Unmarshal([]byte(yamlstr), &p11conf)
+	err := yaml.Unmarshal(yamlstr, &p11conf)
 	if err != nil {
 		return &p11conf, errors.Wrapf(err, "Could not parse Pkcs11Config")
 	}

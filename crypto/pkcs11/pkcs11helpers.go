@@ -138,7 +138,7 @@ func pkcs11UriGetKeyIdAndLabel(p11uri *pkcs11uri.Pkcs11URI) (string, string, err
 
 // pkcs11OpenSession opens a session with a pkcs11 device at the given slot and logs in with the given PIN
 func pkcs11OpenSession(p11ctx *pkcs11.Ctx, slotid uint, pin string) (session pkcs11.SessionHandle, err error) {
-	session, err = p11ctx.OpenSession(uint(slotid), pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	session, err = p11ctx.OpenSession(slotid, pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
 		return 0, errors.Wrapf(err, "OpenSession to slot %d failed", slotid)
 	}
