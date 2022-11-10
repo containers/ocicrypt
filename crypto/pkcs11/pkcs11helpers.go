@@ -178,33 +178,33 @@ func pkcs11UriLogin(p11uri *pkcs11uri.Pkcs11URI, privateKeyOperation bool) (ctx 
 	if slotid >= 0 {
 		session, err := pkcs11OpenSession(p11ctx, uint(slotid), pin)
 		return p11ctx, session, err
-	} else {
-		slots, err := p11ctx.GetSlotList(true)
-		if err != nil {
-			return nil, 0, errors.Wrap(err, "GetSlotList failed")
-		}
-
-		tokenlabel, ok := p11uri.GetPathAttribute("token", false)
-		if !ok {
-			return nil, 0, errors.New("Missing 'token' attribute since 'slot-id' was not given")
-		}
-
-		for _, slot := range slots {
-			ti, err := p11ctx.GetTokenInfo(slot)
-			if err != nil || ti.Label != tokenlabel {
-				continue
-			}
-
-			session, err = pkcs11OpenSession(p11ctx, slot, pin)
-			if err == nil {
-				return p11ctx, session, err
-			}
-		}
-		if len(pin) > 0 {
-			return nil, 0, errors.New("Could not create session to any slot and/or log in")
-		}
-		return nil, 0, errors.New("Could not create session to any slot")
 	}
+
+	slots, err := p11ctx.GetSlotList(true)
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "GetSlotList failed")
+	}
+
+	tokenlabel, ok := p11uri.GetPathAttribute("token", false)
+	if !ok {
+		return nil, 0, errors.New("Missing 'token' attribute since 'slot-id' was not given")
+	}
+
+	for _, slot := range slots {
+		ti, err := p11ctx.GetTokenInfo(slot)
+		if err != nil || ti.Label != tokenlabel {
+			continue
+		}
+
+		session, err = pkcs11OpenSession(p11ctx, slot, pin)
+		if err == nil {
+			return p11ctx, session, err
+		}
+	}
+	if len(pin) > 0 {
+		return nil, 0, errors.New("Could not create session to any slot and/or log in")
+	}
+	return nil, 0, errors.New("Could not create session to any slot")
 }
 
 func pkcs11Logout(ctx *pkcs11.Ctx, session pkcs11.SessionHandle) {
