@@ -448,7 +448,7 @@ func Decrypt(privKeyObjs []*Pkcs11KeyFileObject, pkcs11blobstr []byte) ([]byte, 
 	case 0:
 		// latest supported version
 	default:
-		return nil, errors.Errorf("Found Pkcs11Blob with version %d but maximum supported version is 0.", pkcs11blob.Version)
+		return nil, errors.Errorf("found Pkcs11Blob with version %d but maximum supported version is 0", pkcs11blob.Version)
 	}
 	// since we do trial and error, collect all encountered errors
 	errs := ""
@@ -458,7 +458,7 @@ func Decrypt(privKeyObjs []*Pkcs11KeyFileObject, pkcs11blobstr []byte) ([]byte, 
 		case 0:
 			// last supported version
 		default:
-			return nil, errors.Errorf("Found Pkcs11Recipient with version %d but maximum supported version is 0.", recipient.Version)
+			return nil, errors.Errorf("found Pkcs11Recipient with version %d but maximum supported version is 0", recipient.Version)
 		}
 
 		ciphertext, err := base64.StdEncoding.DecodeString(recipient.Blob)

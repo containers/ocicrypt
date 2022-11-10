@@ -352,7 +352,7 @@ func GPGGetPrivateKey(descs []ocispec.Descriptor, gpgClient GPGClient, gpgVault 
 			}
 			keywrapper := GetKeyWrapper(scheme)
 			if keywrapper == nil {
-				return nil, nil, errors.Errorf("could not get KeyWrapper for %s\n", scheme)
+				return nil, nil, errors.Errorf("could not get KeyWrapper for %s", scheme)
 			}
 			keyIds, err := keywrapper.GetKeyIdsFromPacket(b64pgpPackets)
 			if err != nil {
