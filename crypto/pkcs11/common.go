@@ -15,6 +15,7 @@ package pkcs11
 
 import (
 	"fmt"
+
 	"github.com/pkg/errors"
 	pkcs11uri "github.com/stefanberger/go-pkcs11uri"
 	"gopkg.in/yaml.v3"
