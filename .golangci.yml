@@ -3,3 +3,4 @@ linters:
     - unconvert
     - gofmt
     - goimports
+    - misspell
