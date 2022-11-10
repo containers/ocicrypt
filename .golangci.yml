@@ -26,3 +26,6 @@ linters-settings:
       - name: indent-error-flow
         severity: warning
         disabled: false
+
+      - name: error-strings
+        disabled: false
