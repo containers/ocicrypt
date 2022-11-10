@@ -184,7 +184,7 @@ func (r TestRunner) Exec(cmdName string, args []string, input []byte) ([]byte, e
 			KeyUnwrapResults: KeyUnwrapResults{OptsData: unwrappedKey},
 		})
 	}
-	return nil, errors.New("unkown protocol")
+	return nil, errors.New("unknown protocol")
 }
 
 func TestKeyWrapKeyProviderCommandSuccess(t *testing.T) {

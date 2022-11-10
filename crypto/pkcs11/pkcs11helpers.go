@@ -153,7 +153,7 @@ func pkcs11OpenSession(p11ctx *pkcs11.Ctx, slotid uint, pin string) (session pkc
 	return session, nil
 }
 
-// pkcs11UriLogin uses the given pkcs11 URI to select the pkcs11 module (share libary) and to get
+// pkcs11UriLogin uses the given pkcs11 URI to select the pkcs11 module (shared library) and to get
 // the PIN to use for login; if the URI contains a slot-id, the given slot-id will be used, otherwise
 // one slot after the other will be attempted and the first one where login succeeds will be used
 func pkcs11UriLogin(p11uri *pkcs11uri.Pkcs11URI, privateKeyOperation bool) (ctx *pkcs11.Ctx, session pkcs11.SessionHandle, err error) {
