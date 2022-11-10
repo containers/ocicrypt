@@ -39,11 +39,11 @@ const ENVVARNAME = "OCICRYPT_CONFIG"
 // not exist, so no error is returned.
 // A config file may look like this:
 // module-directories:
-//   - /usr/lib64/pkcs11/
-//   - /usr/lib/pkcs11/
+// - /usr/lib64/pkcs11/
+// - /usr/lib/pkcs11/
 // allowed-module-paths:
-//   - /usr/lib64/pkcs11/
-//   - /usr/lib/pkcs11/
+// - /usr/lib64/pkcs11/
+// - /usr/lib/pkcs11/
 func parseConfigFile(filename string) (*OcicryptConfig, error) {
 	// a non-existent config file is not an error
 	_, err := os.Stat(filename)

@@ -35,17 +35,17 @@ import (
 	"testing"
 )
 
-//Test runner which mocks binary executable for key wrapping and unwrapping
+// TestRunner mocks binary executable for key wrapping and unwrapping
 type TestRunner struct{}
 
-//Mock annotation packet, which goes into container image manifest
+// Mock annotation packet, which goes into container image manifest
 type annotationPacket struct {
 	KeyUrl     string `json:"key_url"`
 	WrappedKey []byte `json:"wrapped_key"`
 	WrapType   string `json:"wrap_type"`
 }
 
-//grpc server with mock api implementation for serving the clients with mock WrapKey and Unwrapkey grpc method implementations
+// grpc server with mock api implementation for serving the clients with mock WrapKey and Unwrapkey grpc method implementations
 type server struct {
 	keyproviderpb.UnimplementedKeyProviderServiceServer
 }
