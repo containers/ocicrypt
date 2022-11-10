@@ -373,7 +373,6 @@ func CreateCryptoConfig(recipients []string, keys []string) (encconfig.CryptoCon
 
 	if len(ccs) > 0 {
 		return encconfig.CombineCryptoConfigs(ccs), nil
-	} else {
-		return encconfig.CryptoConfig{}, nil
 	}
+	return encconfig.CryptoConfig{}, nil
 }
