@@ -1,9 +1,13 @@
 linters:
   enable:
     - depguard
+    - staticcheck
     - unconvert
     - gofmt
     - goimports
+    - ineffassign
+    - vet
+    - unused
     - misspell
 
 linters-settings:
