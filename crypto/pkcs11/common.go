@@ -50,7 +50,7 @@ func ParsePkcs11Uri(uri string) (*pkcs11uri.Pkcs11URI, error) {
 // ParsePkcs11KeyFile parses a pkcs11 key file holding a pkcs11 URI describing a private key.
 // The file has the following yaml format:
 // pkcs11:
-//  - uri : <pkcs11 uri>
+// - uri : <pkcs11 uri>
 // An error is returned if the pkcs11 URI is malformed
 func ParsePkcs11KeyFile(yamlstr []byte) (*Pkcs11KeyFileObject, error) {
 	p11keyfile := Pkcs11KeyFile{}
