@@ -18,7 +18,6 @@ package softhsm
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -42,7 +41,7 @@ func (s *SoftHSMSetup) GetConfigFilename() string {
 
 // RunSoftHSMSetup runs 'softhsm_setup setup' and returns the public key that was displayed
 func (s *SoftHSMSetup) RunSoftHSMSetup(softhsmSetup string) (string, error) {
-	statedir, err := ioutil.TempDir("", "ocicrypt")
+	statedir, err := os.MkdirTemp("", "ocicrypt")
 	if err != nil {
 		return "", errors.Wrapf(err, "Could not create temporary directory fot softhsm state")
 	}
