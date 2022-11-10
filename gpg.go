@@ -18,7 +18,7 @@ package ocicrypt
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -272,8 +272,8 @@ func runGPGGetOutput(cmd *exec.Cmd) ([]byte, error) {
 		return nil, err
 	}
 
-	stdoutstr, err2 := ioutil.ReadAll(stdout)
-	stderrstr, _ := ioutil.ReadAll(stderr)
+	stdoutstr, err2 := io.ReadAll(stdout)
+	stderrstr, _ := io.ReadAll(stderr)
 
 	if err := cmd.Wait(); err != nil {
 		return nil, fmt.Errorf("error from %s: %s", cmd.Path, string(stderrstr))

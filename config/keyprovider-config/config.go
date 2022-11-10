@@ -18,7 +18,6 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 
 	"github.com/pkg/errors"
@@ -53,7 +52,7 @@ func parseConfigFile(filename string) (*OcicryptConfig, error) {
 		return nil, nil
 	}
 
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
