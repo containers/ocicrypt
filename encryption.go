@@ -243,7 +243,7 @@ func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) 
 		}
 	}
 	if !privKeyGiven {
-		return nil, errors.New("missing private key needed for decryption")
+		return nil, errors.Errorf("missing private key needed for decryption:\n%s", errs)
 	}
 	return nil, errors.Errorf("no suitable key unwrapper found or none of the private keys could be used for decryption:\n%s", errs)
 }
