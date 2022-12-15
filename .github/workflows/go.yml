@@ -25,7 +25,7 @@ jobs:
       with:
         go-version: ${{ matrix.go }}
 
-    - name: Install 
+    - name: Install
       run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.50.1
 
     - name: Build
