@@ -18,11 +18,11 @@ package softhsm
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type SoftHSMSetup struct {
@@ -43,7 +43,7 @@ func (s *SoftHSMSetup) GetConfigFilename() string {
 func (s *SoftHSMSetup) RunSoftHSMSetup(softhsmSetup string) (string, error) {
 	statedir, err := os.MkdirTemp("", "ocicrypt")
 	if err != nil {
-		return "", errors.Wrapf(err, "Could not create temporary directory fot softhsm state")
+		return "", fmt.Errorf("Could not create temporary directory fot softhsm state: %w", err)
 	}
 	s.statedir = statedir
 
@@ -54,7 +54,7 @@ func (s *SoftHSMSetup) RunSoftHSMSetup(softhsmSetup string) (string, error) {
 	err = cmd.Run()
 	if err != nil {
 		os.RemoveAll(s.statedir)
-		return "", errors.Wrapf(err, "%s setup failed: %s", softhsmSetup, out.String())
+		return "", fmt.Errorf("%s setup failed: %s: %w", softhsmSetup, out.String(), err)
 	}
 
 	o := out.String()
@@ -75,7 +75,7 @@ func (s *SoftHSMSetup) RunSoftHSMGetPubkey(softhsmSetup string) (string, error) 
 	cmd.Env = append(cmd.Env, "SOFTHSM_SETUP_CONFIGDIR="+s.statedir)
 	err := cmd.Run()
 	if err != nil {
-		return "", errors.Wrapf(err, "%s getpubkey failed: %s", softhsmSetup, out.String())
+		return "", fmt.Errorf("%s getpubkey failed: %s: %w", softhsmSetup, out.String(), err)
 	}
 
 	return out.String(), nil
