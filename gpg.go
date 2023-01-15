@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -310,9 +311,15 @@ func resolveRecipients(gc GPGClient, recipients []string) []string {
 	return result
 }
 
-var emailPattern = regexp.MustCompile(`uid\s+\[.*\]\s.*\s<(?P<email>.+)>`)
+var (
+	onceRegexp   sync.Once
+	emailPattern *regexp.Regexp
+)
 
 func extractEmailFromDetails(details []byte) string {
+	onceRegexp.Do(func() {
+		emailPattern = regexp.MustCompile(`uid\s+\[.*\]\s.*\s<(?P<email>.+)>`)
+	})
 	loc := emailPattern.FindSubmatchIndex(details)
 	if len(loc) == 0 {
 		return ""
