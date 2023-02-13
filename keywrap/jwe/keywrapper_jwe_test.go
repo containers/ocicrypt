@@ -22,7 +22,7 @@ import (
 
 	"github.com/containers/ocicrypt/config"
 	"github.com/containers/ocicrypt/utils"
-	jose "gopkg.in/square/go-jose.v2"
+	"github.com/go-jose/go-jose/v3"
 )
 
 var oneEmpty []byte
