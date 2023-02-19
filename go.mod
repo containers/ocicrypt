@@ -1,11 +1,10 @@
 module github.com/containers/ocicrypt
 
-go 1.16
+go 1.18
 
 require (
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/golang/protobuf v1.4.3
-	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.2
@@ -17,4 +16,15 @@ require (
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1
 	google.golang.org/grpc v1.33.2
 	gopkg.in/yaml.v3 v3.0.0
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/google/go-cmp v0.5.2 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect
+	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68 // indirect
+	golang.org/x/text v0.3.3 // indirect
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
 )
