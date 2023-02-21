@@ -12,7 +12,7 @@ require (
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20201008174630-78d3cae3a980
 	github.com/stretchr/testify v1.6.1
 	go.mozilla.org/pkcs7 v0.0.0-20200128120323-432b2356ecb1
-	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
+	golang.org/x/crypto v0.6.0
 	golang.org/x/term v0.5.0
 	google.golang.org/grpc v1.33.2
 	gopkg.in/yaml.v3 v3.0.0
