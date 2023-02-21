@@ -29,3 +29,7 @@ linters-settings:
 
       - name: error-strings
         disabled: false
+
+  staticcheck:
+    # Suppress reports of deprecated packages
+    checks: ["-SA1019"]
