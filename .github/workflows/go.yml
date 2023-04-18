@@ -21,7 +21,7 @@ jobs:
       run: sudo apt-get install -y gnutls-bin softhsm2
 
     - name: Setup go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go }}
 
