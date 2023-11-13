@@ -3,7 +3,7 @@ module github.com/containers/ocicrypt
 go 1.20
 
 require (
-	github.com/go-jose/go-jose/v3 v3.0.0
+	github.com/go-jose/go-jose/v3 v3.0.1
 	github.com/golang/protobuf v1.5.3
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/opencontainers/go-digest v1.0.0
