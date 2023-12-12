@@ -70,6 +70,21 @@ func createValidJweCcs() ([]*config.CryptoConfig, error) {
 		return nil, err
 	}
 
+	ecKey, err := utils.CreateECDSAKey(elliptic.P521())
+	if err != nil {
+		return nil, err
+	}
+
+	jweEcPrivKeyJwk, err := jose.JSONWebKey{Key: ecKey, Algorithm: string(jose.ECDH_ES_A256KW)}.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	jweEcPubKeyJwk, err := jose.JSONWebKey{Key: &ecKey.PublicKey, Algorithm: string(jose.ECDH_ES_A256KW)}.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
 	validJweCcs := []*config.CryptoConfig{
 		// Key 1
 		{
@@ -222,6 +237,27 @@ func createValidJweCcs() ([]*config.CryptoConfig, error) {
 			DecryptConfig: &config.DecryptConfig{
 				Parameters: map[string][][]byte{
 					"privkeys":           {jweEcPrivKeyDer},
+					"privkeys-passwords": {oneEmpty},
+				},
+			},
+		},
+		// EC Key (JWK format)
+		{
+			EncryptConfig: &config.EncryptConfig{
+				Parameters: map[string][][]byte{
+					"pubkeys": {jweEcPubKeyJwk},
+				},
+				DecryptConfig: config.DecryptConfig{
+					Parameters: map[string][][]byte{
+						"privkeys":           {jweEcPrivKeyJwk},
+						"privkeys-passwords": {oneEmpty},
+					},
+				},
+			},
+
+			DecryptConfig: &config.DecryptConfig{
+				Parameters: map[string][][]byte{
+					"privkeys":           {jweEcPrivKeyJwk},
 					"privkeys-passwords": {oneEmpty},
 				},
 			},
