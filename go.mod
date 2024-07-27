@@ -9,9 +9,9 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/sirupsen/logrus v1.9.3
+	github.com/smallstep/pkcs7 v0.0.0-20240723090913-5e2c6a136dfa
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20201008174630-78d3cae3a980
 	github.com/stretchr/testify v1.9.0
-	go.mozilla.org/pkcs7 v0.0.0-20200128120323-432b2356ecb1
 	golang.org/x/crypto v0.24.0
 	golang.org/x/term v0.21.0
 	google.golang.org/grpc v1.64.1
