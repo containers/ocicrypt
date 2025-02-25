@@ -18,7 +18,9 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Install deps
-      run: sudo apt-get install -y gnutls-bin softhsm2
+      run: |
+        sudo apt-get -y update
+        sudo apt-get install -y gnutls-bin softhsm2
 
     - name: Setup go
       uses: actions/setup-go@v4
