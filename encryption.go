@@ -213,6 +213,7 @@ func DecryptLayer(dc *config.DecryptConfig, encLayerReader io.Reader, desc ocisp
 
 func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) ([]byte, error) {
 	privKeyGiven := false
+	keyproviderTried := false
 	errs := ""
 	if len(keyWrapperAnnotations) == 0 {
 		return nil, errors.New("missing Annotations needed for decryption")
@@ -224,6 +225,11 @@ func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) 
 
 			if keywrapper.NoPossibleKeys(dc.Parameters) {
 				continue
+			}
+
+			isKeyprovider := strings.HasPrefix(scheme, "provider.")
+			if isKeyprovider {
+				keyproviderTried = true
 			}
 
 			if len(keywrapper.GetPrivateKeys(dc.Parameters)) > 0 {
@@ -242,7 +248,7 @@ func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) 
 			return optsData, nil
 		}
 	}
-	if !privKeyGiven {
+	if !privKeyGiven && !keyproviderTried {
 		return nil, fmt.Errorf("missing private key needed for decryption:\n%s", errs)
 	}
 	return nil, fmt.Errorf("no suitable key unwrapper found or none of the private keys could be used for decryption:\n%s", errs)

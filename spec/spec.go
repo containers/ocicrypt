@@ -17,4 +17,6 @@ const (
 	//
 	// Deprecated: Use [MediaTypeLayerNonDistributableZstdEnc].
 	MediaTypeLayerNonDistributableZsdtEnc = MediaTypeLayerNonDistributableZstdEnc
+	// MediaTypeWasmEnc is MIME type used for encrypted WASM layers.
+	MediaTypeWasmEnc = "application/vnd.wasm.content.layer.v1+wasm+encrypted"
 )
