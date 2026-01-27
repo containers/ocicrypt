@@ -42,6 +42,8 @@ import (
 // the encrypted layer
 type EncryptLayerFinalizer func() (map[string]string, error)
 
+const keyProviderSchemePrefix = "provider."
+
 func init() {
 	keyWrappers = make(map[string]keywrap.KeyWrapper)
 	keyWrapperAnnotations = make(map[string]string)
@@ -54,7 +56,7 @@ func init() {
 		log.Error(err)
 	} else if ic != nil {
 		for provider, attrs := range ic.KeyProviderConfig {
-			RegisterKeyWrapper("provider."+provider, keyprovider.NewKeyWrapper(provider, attrs))
+			RegisterKeyWrapper(keyProviderSchemePrefix+provider, keyprovider.NewKeyWrapper(provider, attrs))
 		}
 	}
 }
@@ -227,7 +229,7 @@ func decryptLayerKeyOptsData(dc *config.DecryptConfig, desc ocispec.Descriptor) 
 				continue
 			}
 
-			isKeyprovider := strings.HasPrefix(scheme, "provider.")
+			isKeyprovider := strings.HasPrefix(scheme, keyProviderSchemePrefix)
 			if isKeyprovider {
 				keyproviderTried = true
 			}
