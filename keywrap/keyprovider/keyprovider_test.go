@@ -338,8 +338,15 @@ func TestKeyWrapKeyProviderGRPCSuccess(t *testing.T) {
 					   "path": "/usr/lib/keyprovider-2-unwrapkey",
 					   "args": []
 					}
+                },
+	            "keyprovider-4": {
+                   "grpc": "localhost:3990",
+                   "grpc-tls": {
+					   "server-name": "localhost",
+					   "insecure-skip-verify": false,
+					   "root-ca-file": "/etc/ssl/certs/ca-certificates.crt"
+					}
                 }
-
         }}
         `
 	tempFile, _ := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
