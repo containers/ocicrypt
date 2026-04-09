@@ -183,6 +183,7 @@ func getProviderGRPCOutput(input []byte, connString string, grpcTls *keyprovider
 			if err != nil {
 				return nil, fmt.Errorf("failed to load root CA certificates  error=%v", err)
 			}
+			rootCAs = x509.NewCertPool()
 			if !rootCAs.AppendCertsFromPEM(pem) {
 				return nil, fmt.Errorf("no root CA certs parsed from file ")
 			}
