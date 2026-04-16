@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.1
 
 require (
-	github.com/go-jose/go-jose/v4 v4.1.3
+	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/golang/protobuf v1.5.4
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/opencontainers/go-digest v1.0.0
