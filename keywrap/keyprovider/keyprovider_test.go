@@ -191,25 +191,25 @@ func TestKeyWrapKeyProviderCommandSuccess(t *testing.T) {
 	testConfigFile := "config.json"
 	os.Setenv("OCICRYPT_KEYPROVIDER_CONFIG", testConfigFile)
 	//Config File with executable for key wrap
-	configFile1 := `{"key-providers": {
-                "keyprovider-1": {
-					"cmd": {
-					   "path": "/usr/lib/keyprovider-1-wrapkey",
-					   "args": []
-					}
-                }
-        }}
-        `
+	configFile1 := `{
+	"key-providers": {
+		"keyprovider-1": {
+			"cmd": {
+				"path": "/usr/lib/keyprovider-1-wrapkey",
+				"args": []
+			}
+		}
+	}}`
 	//Config File with executable for key unwrap
-	configFile2 := `{"key-providers": {
-                "keyprovider-1": {
-					"cmd": {
-					   "path": "/usr/lib/keyprovider-1-unwrapkey",
-					   "args": []
-					}
-                }
-        }}
-        `
+	configFile2 := `{
+	"key-providers": {
+		"keyprovider-1": {
+			"cmd": {
+				"path": "/usr/lib/keyprovider-1-unwrapkey",
+				"args": []
+			}
+		}
+	}}`
 	configFile, _ := os.OpenFile(testConfigFile, os.O_CREATE|os.O_WRONLY, 0644)
 	_, err := configFile.Write([]byte(configFile1))
 	assert.NoError(t, err)
@@ -255,37 +255,37 @@ func TestKeyWrapKeyProviderCommandFail(t *testing.T) {
 	testConfigFile := "config.json"
 	os.Setenv("OCICRYPT_KEYPROVIDER_CONFIG", testConfigFile)
 	//Config File with executable for key wrap
-	configFile1 := `{"key-providers": {
-                "keyprovider-1": {
-					"cmd": {
-					   "path": "/usr/lib/keyprovider-1-wrapkey",
-					   "args": []
-					}
-                },
-		        "keyprovider-2": {
-					"cmd": {
-					   "path": "/usr/lib/keyprovider-2-wrapkey",
-					   "args": []
-					}
-                }
-        }}
-        `
+	configFile1 := `{
+	"key-providers": {
+		"keyprovider-1": {
+			"cmd": {
+				"path": "/usr/lib/keyprovider-1-wrapkey",
+				"args": []
+			}
+		},
+		"keyprovider-2": {
+			"cmd": {
+				"path": "/usr/lib/keyprovider-2-wrapkey",
+				"args": []
+			}
+		}
+	}}`
 	//Config File with executable for key unwrap
-	configFile2 := `{"key-providers": {
-                  "keyprovider-1": {
-                      "cmd": {
-					      "path": "/usr/lib/keyprovider-1-unwrapkey",
-                          "args": []
-					   }
-                    },
-		           "keyprovider-2": {
-					"cmd": {
-					   "path": "/usr/lib/keyprovider-2-unwrapkey",
-					   "args": []
-					}
-                }
-        }}
-        `
+	configFile2 := `{
+	"key-providers": {
+		"keyprovider-1": {
+			"cmd": {
+				"path": "/usr/lib/keyprovider-1-unwrapkey",
+				"args": []
+			}
+		},
+		"keyprovider-2": {
+			"cmd": {
+				"path": "/usr/lib/keyprovider-2-unwrapkey",
+				"args": []
+			}
+		}
+	}}`
 	configFile, _ := os.OpenFile(testConfigFile, os.O_CREATE|os.O_WRONLY, 0644)
 	_, err := configFile.Write([]byte(configFile1))
 	assert.NoError(t, err)
@@ -326,29 +326,31 @@ func TestKeyWrapKeyProviderCommandFail(t *testing.T) {
 func TestKeyWrapKeyProviderGRPCSuccess(t *testing.T) {
 	path := "config.json"
 	os.Setenv("OCICRYPT_KEYPROVIDER_CONFIG", path)
-	filecontent := `{"key-providers": {
-                "keyprovider-1": {
-                   "grpc": "localhost:50051"
-                },
-	            "keyprovider-2": {
-                   "grpc": "localhost:3990"
-                },
-                "keyprovider-3": {
-                   "cmd": {
-					   "path": "/usr/lib/keyprovider-2-unwrapkey",
-					   "args": []
-					}
-                },
-	            "keyprovider-4": {
-                   "grpc": "localhost:3990",
-                   "grpc-tls": {
-					   "server-name": "localhost",
-					   "insecure-skip-verify": false,
-					   "root-ca-file": "/etc/ssl/certs/ca-certificates.crt"
-					}
-                }
-        }}
-        `
+	filecontent := `{
+	"key-providers": {
+		"keyprovider-1": {
+			"grpc": "localhost:50051"
+		},
+		"keyprovider-2": {
+			"grpc": "localhost:3990"
+		},
+		"keyprovider-3": {
+			"cmd": {
+				"path": "/usr/lib/keyprovider-2-unwrapkey",
+				"args": []
+			}
+		},
+		"keyprovider-4": {
+			"grpc": "localhost:3990",
+			"grpc-tls": {
+				"server-name": "localhost",
+				"insecure-skip-verify": false,
+				"root-ca-file": "/etc/ssl/certs/ca-certificates.crt"
+			}
+		}
+	}}
+	`
+
 	tempFile, _ := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	_, err := tempFile.Write([]byte(filecontent))
 	assert.NoError(t, err)
