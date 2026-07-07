@@ -141,3 +141,55 @@ func TestEncryptLayer(t *testing.T) {
 		t.Fatalf("Expected %v, got %v", data, decLayer)
 	}
 }
+
+func TestWasmMediaTypeEncryption(t *testing.T) {
+	data := []byte("This is WASM module data!")
+	desc := ocispec.Descriptor{
+		Digest:    digest.FromBytes(data),
+		Size:      int64(len(data)),
+		MediaType: "application/vnd.wasm.content.layer.v1+wasm",
+	}
+
+	dataReader := bytes.NewReader(data)
+
+	encLayerReader, encLayerFinalizer, err := EncryptLayer(ec, dataReader, desc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encLayer := make([]byte, 1024)
+	encsize, err := encLayerReader.Read(encLayer)
+	if err != io.EOF {
+		t.Fatal("Expected EOF")
+	}
+	encLayerReaderAt := bytes.NewReader(encLayer[:encsize])
+
+	annotations, err := encLayerFinalizer()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(annotations) == 0 {
+		t.Fatal("No keys created for annotations")
+	}
+
+	newDesc := ocispec.Descriptor{
+		Annotations: annotations,
+		MediaType:   "application/vnd.wasm.content.layer.v1+wasm+encrypted",
+	}
+
+	decLayerReader, _, err := DecryptLayer(dc, encLayerReaderAt, newDesc, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decLayer := make([]byte, 1024)
+	decsize, err := decLayerReader.Read(decLayer)
+	if err != nil && err != io.EOF {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(decLayer[:decsize], data) {
+		t.Fatalf("Expected %v, got %v", data, decLayer)
+	}
+}
