@@ -3,6 +3,7 @@ module github.com/containers/ocicrypt
 go 1.25.0
 
 require (
+	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/miekg/pkcs11 v1.1.2
 	github.com/opencontainers/go-digest v1.0.0
@@ -12,15 +13,16 @@ require (
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6
 	github.com/stretchr/testify v1.11.1
 	go.yaml.in/yaml/v3 v3.0.4
-	golang.org/x/crypto v0.53.0
 	golang.org/x/term v0.44.0
 	google.golang.org/grpc v1.82.0
 	google.golang.org/protobuf v1.36.11
 )
 
 require (
+	github.com/cloudflare/circl v1.6.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
