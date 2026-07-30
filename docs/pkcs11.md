@@ -2,9 +2,37 @@
 
 Ocicrypt supports the use of an experimental pkcs11-based protocol. This allows the ability to encrypt a container image so that it can be decrypted by a key which resides in a Hardware Security Module (HSM). In this document, we will go through a tutorial on how to setup and use this capability with a software emulated HSM, SoftHSM. See [this guide](https://github.com/containers/ocicrypt/blob/main/docs/cex-ep11.md) on how to do this with an IBM CryptoExpress HSM instead.
 
-This tutorial is done on Ubuntu.
+# The OCICRYPT_CONFIG environment variable
+
+The `OCICRYPT_CONFIG` environment variable can be used to configure the pkcs11
+module support and allows a user to define the module-directories where pkcs11
+modules can be found as well as set restrictions for which pkcs11 modules can
+be used. For a default configuration supporting various distros' pkcs11 module
+paths, this enviroment variable can be set to the value `internal`. Otherwise
+it should be assigned the name of a file. The following is an example of the
+contents of such a file:
+
+```
+pkcs11:
+  module-directories:
+    - /usr/lib64/pkcs11/
+    - /usr/lib/pkcs11/
+    - /usr/lib/softhsm/
+  allowed-module-paths:
+    - /usr/lib64/pkcs11/libsofthsm2.so
+    - /usr/lib/pkcs11/libsofthsm2.so
+    - /usr/lib/softhsm/libsofthsm2.so
+```
+
+The above configuration file defines 3 different paths for the
+module-directories covering the possible paths for various Linux distributions
+where SoftHSM's pkcs11 module can be found. Since the allowed-module-paths
+explicitly mention the libsofthsm2.so pkcs11 module, the resulting policy
+only allows usage of SoftHSM's pkcs11 module.
 
 # Setting up SoftHSM
+
+The following tutorial is done on Ubuntu.
 
 ## Requirements
 
