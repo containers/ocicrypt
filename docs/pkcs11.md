@@ -1,13 +1,40 @@
-# Ocicrypt Pkcs11 (Experimental)
+# Ocicrypt PKCS #11 (Experimental)
 
-Ocicrypt supports the use of an experimental pkcs11-based protocol. This allows the ability to encrypt a container image so that it can be decrypted by a key which resides in a Hardware Security Module (HSM). In this document, we will go through a tutorial on how to setup and use this capability with a software emulated HSM, SoftHSM. See [this guide](https://github.com/containers/ocicrypt/blob/main/docs/cex-ep11.md) on how to do this with an IBM CryptoExpress HSM instead.
+Ocicrypt supports the use of an experimental PKCS #11-based protocol. This allows
+the ability to encrypt a container image so that it can be decrypted by a key
+which resides in a Hardware Security Module (HSM). In this document, we will go
+through a tutorial on how to setup and use this capability with a software
+emulated HSM, SoftHSM. See
+[this guide](https://github.com/containers/ocicrypt/blob/main/docs/cex-ep11.md)
+on how to do this with an IBM CryptoExpress HSM instead.
+
+# PKCS #11 key file format
+
+Even though a PKCS #11 URI fully describes a key, it is sometimes impractical to
+pass the URI to an application directly. Besides that, some PKCS #11 drivers
+(modules) need access to additional parameters, such as configuration files.
+The latter is often done by setting module-specific environment variables.
+The following shows an example of the PKCS #11 key file format used in this
+project:
+
+```
+pkcs11:
+  uri: pkcs11:model=SoftHSM%20v2;manufacturer=SoftHSM%20project;serial=f21985c5bec65cff;token=ocicrypt-test;id=%2B%74%4C%87%C6%6D%9C%32%C1%E1%82%D5%A3%D0%AC%6C%50%D0%AD%89;object=mykey;type=public?pin-value=1234&module-name=softhsm2
+module:
+  env:
+    SOFTHSM2_CONF: /home/stefanb/softhsm-config/softhsm2.conf
+```
+
+The above describes a SoftHSM key with the given URI. When the driver module
+for this key is used, then the SOFTHSM2_CONF environment variable is set to
+the given value.
 
 # The OCICRYPT_CONFIG environment variable
 
-The `OCICRYPT_CONFIG` environment variable can be used to configure the pkcs11
-module support and allows a user to define the module-directories where pkcs11
-modules can be found as well as set restrictions for which pkcs11 modules can
-be used. For a default configuration supporting various distros' pkcs11 module
+The `OCICRYPT_CONFIG` environment variable can be used to configure the PKCS #11
+module support and allows a user to define the module-directories where PKCS #11
+modules can be found as well as set restrictions for which PKCS #11 modules can
+be used. For a default configuration supporting various distros' PKCS #11 module
 paths, this enviroment variable can be set to the value `internal`. Otherwise
 it should be assigned the name of a file. The following is an example of the
 contents of such a file:
@@ -26,9 +53,9 @@ pkcs11:
 
 The above configuration file defines 3 different paths for the
 module-directories covering the possible paths for various Linux distributions
-where SoftHSM's pkcs11 module can be found. Since the allowed-module-paths
-explicitly mention the libsofthsm2.so pkcs11 module, the resulting policy
-only allows usage of SoftHSM's pkcs11 module.
+where SoftHSM's PKCS #11 module can be found. Since the allowed-module-paths
+explicitly mention the libsofthsm2.so PKCS #11 module, the resulting policy
+only allows usage of SoftHSM's PKCS #11 module.
 
 # Setting up SoftHSM
 
@@ -61,7 +88,7 @@ EOF
 ```
 
 
-# Creating a pkcs11 key in SoftHSM
+# Creating a PKCS #11 key in SoftHSM
 
 To create a key, we need to first create a token, and then generate the private key for the token.
 
@@ -127,7 +154,7 @@ export GNUTLS_PIN=my-pin
 
 We will now create a key pair for this associated token in the HSM.
 
-Note: ALWAYS  protect pkcs11 URIs with single quotes. (i.e. '<uri>'), If you are not using the `GNUTLS_PIN` environment variable, when prompted for the pin, enter the pin used above (in our example, it is `my-pin`).
+Note: ALWAYS  protect PKCS #11 URIs with single quotes. (i.e. '<uri>'), If you are not using the `GNUTLS_PIN` environment variable, when prompted for the pin, enter the pin used above (in our example, it is `my-pin`).
 
 Run
 ```
@@ -151,7 +178,7 @@ Ecq2jPcQiQpyOEr2xppwmPa5daJm00Syr3wuXxu4J0+HAgMBAAE=
 -----END PUBLIC KEY-----
 ```
 
-We now need to find the pkcs11 URI of the private key by using the URI of the token
+We now need to find the PKCS #11 URI of the private key by using the URI of the token
 ```
 p11tool --login --list-privkeys 'pkcs11:model=SoftHSM%20v2;manufacturer=SoftHSM%20project;serial=ee777786c4a769fb;token=mytoken'
 ```
@@ -176,16 +203,15 @@ pkcs11:model=SoftHSM%20v2;manufacturer=SoftHSM%20project;serial=ee777786c4a769fb
 ```
 
 
-# Setting up PKCS11 for ocicrypt
+# Setting up PKCS #11 for ocicrypt
 
+# Configuring PKCS #11 modules for ocicrypt users
 
-# Configuring pkcs11 modules for ocicrypt users
+In order to use PKCS #11 with the ocicrypt library, there are several configuration and key conventions that need to be noted.
 
-In order to use pkcs11 with the ocicrypt library, there are several configuration and key conventions that need to be noted. 
+Encrypting/decrypting with ocicrypt's PKCS #11 keywrap module consists of two parts. One is the metadata of the key to use for encryption/decryption (i.e. similar to how keys are passed in via using other ocicrypt protocols such as  jwe:, pkcs11:), and configuring the HSM modules on the host.
 
-Encrypting/decrypting with ocicrypt's pkcs11 keywrap module consists of two parts. One is the metadata of the key to use for encryption/decryption (i.e. similar to how keys are passed in via using other ocicrypt protocols such as  jwe:, pkcs11:), and configuring the HSM modules on the host.
-
-## Creating pkcs11 key configuration. 
+## Creating PKCS #11 key configuration
 
 This is the representation of the key that the key-wrap module will use to talk to the HSM. It can be passed in like any other protocol key, i.e. pkcs11:myPkcs11Key.yaml. Note that this key can act as a private key and public key for ocicrypt. It is also possible to encrypt with a regular public key (as was output in the above step when generating the key).
 
@@ -212,18 +238,18 @@ This configuration is done via an environment variable `OCICRPYT_CONFIG`. Here i
 
 # Encrpyting/Decrypting examples
 
-We will show how this can be used with users of ocicrypt. After performing the steps above, we are ready to encrypt/decrypt with the pkcs11 protocol. The capabilities that the tools provide will be:
+We will show how this can be used with users of ocicrypt. After performing the steps above, we are ready to encrypt/decrypt with the PKCS #11 protocol. The capabilities that the tools provide will be:
 
-- Encrypting an image with ocicrypt pkcs11 protocol using a public key (PEM)
-- Encrypting an image with ocicrypt pkcs11 protocol using a pkcs11 key configuration (requires HSM access)
-- Decrypting an image with ocicrypt pkcs11 protocol using a pkcs11 key configuration (requires HSM access)
+- Encrypting an image with ocicrypt PKCS #11 protocol using a public key (PEM)
+- Encrypting an image with ocicrypt PKCS #11 protocol using a PKCS #11 key configuration (requires HSM access)
+- Decrypting an image with ocicrypt PKCS #11 protocol using a PKCS #11 key configuration (requires HSM access)
 
 We will go through 3 consumers of the ocicrypt library.
 - [containerd/imgcrypt](http://github.com/containerd/imgcrypt)
 - [skopeo](https://github.com/containers/skopeo)
 - [buildah](https://github.com/containers/buildah)
 
-NOTE: only builds that use ocicrypt v1.1.0 and above will have pkcs11 experimental support.
+NOTE: only builds that use ocicrypt v1.1.0 and above will have PKCS #11 experimental support.
 
 
 We remember that we created two files above, pubkey.pem and `myPkcs11Key.yaml`. For the following command executions, we assume that the plaintext image has already been downloaded. We are using the image `docker.io/library/alpine:latest`.
@@ -241,7 +267,7 @@ Encrypting docker.io/library/alpine:latest to alpine.enc.pkcs11key:latest
 Note: Pkcs11 support is currently experimental
 ```
 
-### Encryping with PKCS11 Key Configuration
+### Encryping with PKCS #11 Key Configuration
 
 ```
 $ OCICRYPT_CONFIG=internal ./bin/ctr-enc images encrypt --recipient pkcs11:pubkey.pem docker.io/library/alpine:latest alpine.enc.pkcs11pubkey:latest
@@ -250,7 +276,7 @@ Note: Pkcs11 support is currently experimental
 ```
 
 
-### Decrypting with both images encrypted above with PKCS11 Key Configuration 
+### Decrypting with both images encrypted above with PKCS #11 Key Configuration
 
 ```
 $ OCICRYPT_CONFIG=internal ./bin/ctr-enc images decrypt --key myPkcs11Key.yaml alpine.enc.pkcs11key:latest alpine.dec.pkcs11key:latest
@@ -274,7 +300,7 @@ Writing manifest to image destination
 Storing signatures
 ```
 
-### Encryping with PKCS11 Key Configuration
+### Encryping with PKCS #11 Key Configuration
 
 ```
 $ OCICRYPT_CONFIG=internal skopeo copy --encryption-key pkcs11:myPkcs11Key.yaml  oci:alpine:latest oci:alpine_enc_pkcs11key:latest
@@ -287,7 +313,7 @@ Storing signatures
 ```
 
 
-### Decrypting with both images encrypted above with PKCS11 Key Configuration 
+### Decrypting with both images encrypted above with PKCS #11 Key Configuration
 
 ```
 $ OCICRYPT_CONFIG=internal skopeo copy --decryption-key myPkcs11Key.yaml  oci:alpine_enc_pkcs11pubkey:latest oci:alpine_dec_pkcs11pubkey:latest
@@ -318,7 +344,7 @@ Copying config 0f5f445df8 done
 Writing manifest to image destination
 Storing signatures
 ```
-### Encryping with PKCS11 Key Configuration
+### Encryping with PKCS #11 Key Configuration
 ```
 $ OCICRYPT_CONFIG=internal ./bin/buildah push --encryption-key pkcs11:myPkcs11Key.yaml  docker.io/library/alpine:latest oci:alpine_enc_pkcs11key:latest
 Getting image source signatures
@@ -328,7 +354,7 @@ Writing manifest to image destination
 Storing signatures
 ```
 
-### Decrypting with both images encrypted above with PKCS11 Key Configuration 
+### Decrypting with both images encrypted above with PKCS #11 Key Configuration
 ```
 $ OCICRYPT_CONFIG=internal ./bin/buildah pull --decryption-key myPkcs11Key.yaml  oci:alpine_enc_pkcs11pubkey:latest
 Getting image source signatures
