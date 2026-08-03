@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/containers/ocicrypt/config"
+	"github.com/containers/ocicrypt/spec"
 	digest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -124,6 +125,62 @@ func TestEncryptLayer(t *testing.T) {
 
 	newDesc := ocispec.Descriptor{
 		Annotations: annotations,
+	}
+
+	decLayerReader, _, err := DecryptLayer(dc, encLayerReaderAt, newDesc, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decLayer := make([]byte, 1024)
+	decsize, err := decLayerReader.Read(decLayer)
+	if err != nil && err != io.EOF {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(decLayer[:decsize], data) {
+		t.Fatalf("Expected %v, got %v", data, decLayer)
+	}
+}
+
+func TestWasmMediaTypeEncryption(t *testing.T) {
+	if spec.MediaTypeWasmEnc != spec.MediaTypeWasmLayer+"+encrypted" {
+		t.Fatalf("Expected encrypted WASM media type %q, got %q", spec.MediaTypeWasmLayer+"+encrypted", spec.MediaTypeWasmEnc)
+	}
+
+	data := []byte("This is WASM module data!")
+	desc := ocispec.Descriptor{
+		Digest:    digest.FromBytes(data),
+		Size:      int64(len(data)),
+		MediaType: spec.MediaTypeWasmLayer,
+	}
+
+	dataReader := bytes.NewReader(data)
+
+	encLayerReader, encLayerFinalizer, err := EncryptLayer(ec, dataReader, desc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encLayer := make([]byte, 1024)
+	encsize, err := encLayerReader.Read(encLayer)
+	if err != io.EOF {
+		t.Fatal("Expected EOF")
+	}
+	encLayerReaderAt := bytes.NewReader(encLayer[:encsize])
+
+	annotations, err := encLayerFinalizer()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(annotations) == 0 {
+		t.Fatal("No keys created for annotations")
+	}
+
+	newDesc := ocispec.Descriptor{
+		Annotations: annotations,
+		MediaType:   spec.MediaTypeWasmEnc,
 	}
 
 	decLayerReader, _, err := DecryptLayer(dc, encLayerReaderAt, newDesc, false)
