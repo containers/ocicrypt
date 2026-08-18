@@ -111,7 +111,7 @@ func wrapFinalizerWithType(fin Finalizer, typ LayerCipherType) Finalizer {
 	}
 }
 
-// Encrypt is the handler for the layer decryption routine
+// Encrypt is the handler for the layer encryption routine
 func (h *LayerBlockCipherHandler) Encrypt(plainDataReader io.Reader, typ LayerCipherType) (io.Reader, Finalizer, error) {
 	if c, ok := h.cipherMap[typ]; ok {
 		sk, err := c.GenerateKey()
