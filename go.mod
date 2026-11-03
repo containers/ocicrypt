@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/ProtonMail/go-crypto v1.4.1
-	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/miekg/pkcs11 v1.1.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
